@@ -4,20 +4,20 @@ Panduan untuk Claude Code saat bekerja di repositori riset *computer vision* ini
 
 ## Tentang Proyek
 
-Repositori ini berisi riset dan eksperimen *computer vision* (CV): pelatihan model,
-evaluasi, dan analisis. Fokus kerja adalah **reproducibility** (hasil dapat
-diulang) dan **eksperimen yang terlacak** (tercatat konfigurasi, data, dan metrik).
-
-> Catatan: bagian-bagian di bawah berisi nilai default yang umum. Perbarui sesuai
-> kondisi nyata repo (framework, dataset, struktur folder) begitu kode pertama masuk.
+Repositori ini berisi riset **deteksi penggunaan helm pada pengendara sepeda motor**:
+pelatihan model, evaluasi, dan analisis. Fokus kerja adalah **reproducibility** dan
+**eksperimen yang terlacak** (tercatat konfigurasi, data, dan metrik).
 
 ## Tujuan & Ruang Lingkup Riset
 
-- **Task utama**: (isi salah satu) klasifikasi citra / deteksi objek / segmentasi /
-  estimasi pose / OCR / image retrieval / generative.
-- **Pertanyaan riset**: rumuskan satu kalimat hipotesis yang sedang diuji.
-- **Baseline**: model/paper pembanding yang menjadi acuan.
-- **Metrik sukses**: mis. Top-1/Top-5 accuracy, mAP@[.5:.95], mIoU, F1, FID.
+- **Task utama**: **deteksi objek** (3 kelas: `helmet`, `license_plate`, `motorcyclist`).
+- **Pertanyaan riset**: apakah mekanisme atensi (C2PSA pada YOLO11, transformer pada
+  RT-DETR, modul CBAM) meningkatkan akurasi deteksi helm dibanding CNN murni YOLOv8s?
+- **Baseline**: **YOLOv8s** (Ultralytics, transfer learning dari COCO).
+- **Metrik sukses**: **mAP@0.5** dan **mAP@[.5:.95]** pada split test; FPS untuk trade-off.
+- **Temuan Fase 1**: tidak ada varian ber-atensi yang mengalahkan YOLOv8s; CBAM turun
+  signifikan. Paper di `results/` (versi Inggris di `results/en/`).
+
 
 ## Struktur Repositori (konvensi yang diharapkan)
 
@@ -54,7 +54,7 @@ pip install -r requirements.txt
 ```
 
 - Catat versi kunci: `python`, framework DL, CUDA/cuDNN, dan driver GPU.
-- Verifikasi GPU sebelum training panjang: `python -c "import torch; print(torch.cuda.is_available())"`.
+- Versi terkunci: Python, **PyTorch 2.8.0**, **Ultralytics 8.4.65**, **CUDA 12.8**, GPU **RTX 4090**.
 
 ## Alur Kerja Umum
 
@@ -93,10 +93,8 @@ python scripts/infer.py --checkpoint <path> --input <gambar.jpg>
 - **Hindari menambah dependency berat** tanpa konfirmasi.
 - Gunakan tipe data & device (CPU/GPU) yang konsisten; waspadai *silent* cast.
 
-## TODO Awal (hapus setelah diisi)
+## Status Proyek
 
-- [ ] Tetapkan task, dataset, dan baseline.
-- [ ] Pilih framework (PyTorch / TensorFlow / JAX) dan kunci versinya.
-- [ ] Buat `requirements.txt` / environment file.
-- [ ] Tambahkan `.gitignore` untuk `data/`, `experiments/`, bobot model.
-- [ ] Tulis `scripts/train.py` dan `configs/` contoh pertama.
+Fase 1 **selesai**: framework dikunci (PyTorch + Ultralytics), `requirements.txt` &
+`.gitignore` ada, baseline YOLOv8s + ablation (YOLO11s, RT-DETR-l, CBAM) multi-seed
+terlatih & dievaluasi, dan paper ditulis (ID + Inggris). Lihat `README.md` & `results/`.
