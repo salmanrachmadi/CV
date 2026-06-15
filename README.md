@@ -62,6 +62,19 @@ python scripts/eval.py --config configs/baseline_yolov8.yaml \
 python scripts/infer.py --checkpoint experiments/<run>/weights/best.pt --input contoh.jpg
 ```
 
+## Demo & dashboard (Streamlit)
+
+Aplikasi interaktif untuk menampilkan hasil model — demo deteksi (pilih model,
+unggah/pilih gambar) + dashboard perbandingan eksperimen:
+
+```bash
+streamlit run app/streamlit_app.py
+```
+
+- `app/streamlit_app.py` — beranda; `app/pages/` — Demo Deteksi & Hasil Eksperimen.
+- Demo memuat checkpoint dari `experiments/` (butuh `data/` & `experiments/` tersedia
+  secara lokal; keduanya gitignored).
+
 ## Eksperimen perbandingan & analisis
 
 Perbandingan arsitektur (YOLO11s, RT-DETR-l, YOLOv8s+CBAM) dijalankan multi-seed lewat
