@@ -1,0 +1,33 @@
+# Konfigurasi eksperimen — Baseline YOLOv8 deteksi helm pengendara motor
+# Sumber kebenaran hyperparameter (CLAUDE.md: konfigurasi lewat file, bukan hardcode).
+# Ubah SATU variabel per run bila ingin atribusi sebab-akibat.
+
+# --- Identitas run ---
+run_name: helm_yolo11s_roboflow      # ablation: hanya model yang berbeda dari baseline
+project_dir: experiments             # output per-run disimpan di sini
+
+# --- Data ---
+data: data/helmet-roboflow/data.yaml # path data.yaml format Ultralytics
+
+# --- Model ---
+model: yolo11s.pt                    # YOLO11 small (pembanding YOLOv8s)
+
+# --- Training (landasan: studi YOLOv8 AI City 2023 & studi Indonesia) ---
+epochs: 100
+imgsz: 1280                          # objek helmet/license_plate kecil → resolusi tinggi
+batch: -1                            # auto-batch: Ultralytics memaksimalkan VRAM (RTX 4090 24GB)
+optimizer: auto                      # 'auto' | 'SGD' | 'Adam' | 'AdamW'
+lr0: 0.01
+patience: 25                         # early stopping
+seed: 42
+deterministic: true
+device: 0                            # GPU index; 'cpu' untuk CPU
+
+# --- Augmentasi (dilaporkan saat membandingkan hasil) ---
+augment:
+  hsv_h: 0.015
+  hsv_s: 0.7
+  hsv_v: 0.4
+  fliplr: 0.5
+  mosaic: 1.0
+  scale: 0.5

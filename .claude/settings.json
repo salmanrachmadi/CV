@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(mkdir -p results/en && echo \"✓ folder results/en/ dibuat\")"
+    ],
+    "additionalDirectories": [
+      "/home/bdo/code/jupyter-code/foldersr/work/project-cv/results/results"
+    ]
+  }
+}

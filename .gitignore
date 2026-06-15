@@ -1,0 +1,45 @@
+# Data & bobot model — JANGAN di-commit (lihat CLAUDE.md)
+data/
+experiments/
+*.pt
+*.pth
+*.ckpt
+*.onnx
+*.engine
+*.npy
+
+# Output inferensi besar (artefak ringkas boleh disimpan manual)
+results/**/*.jpg
+results/**/*.png
+results/**/*.mp4
+# ...kecuali figur publikasi yang dirujuk paper (kecil, harus ikut di-push)
+!results/figures/
+!results/figures/*.png
+
+# Output Ultralytics default yang nyasar (hasil asli ada di experiments/)
+runs/
+
+# Log run
+*.log
+
+# Python
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.ipynb_checkpoints/
+
+# Roboflow / kredensial
+.env
+roboflow_config.json
+
+# OS / editor
+.DS_Store
+.vscode/
+
+# Konfigurasi lokal Claude Code (izin & plugin per-mesin)
+.claude/settings.local.json
+
+# Penanda job background (setsid)
+notebooks/.*_done
