@@ -1,0 +1,105 @@
+\relax 
+\citation{ref1}
+\citation{ref5,ref_terven}
+\citation{ref10}
+\citation{ref11}
+\citation{ref8}
+\citation{ref7}
+\citation{ref12}
+\citation{ref9}
+\@writefile{toc}{\contentsline {section}{\numberline {I}Introduction}{1}{}\protected@file@percent }
+\citation{ref1}
+\citation{ref3}
+\citation{ref4}
+\citation{ref5}
+\citation{ref13}
+\citation{ref_terven}
+\citation{ref17}
+\citation{ref18}
+\citation{ref10}
+\citation{ref11}
+\citation{ref8}
+\citation{ref7}
+\citation{ref15}
+\citation{ref16}
+\citation{ref12}
+\citation{ref9}
+\citation{ref23}
+\@writefile{toc}{\contentsline {section}{\numberline {II}Literature Review}{2}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {II-A}}Helmet-Use Detection}{2}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {II-B}}Single-Stage Detectors and the YOLO Family}{2}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {II-C}}Attention Mechanisms in Computer Vision}{2}{}\protected@file@percent }
+\citation{ref6}
+\citation{ref14}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {II-D}}Attention in Helmet Detection}{3}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {II-E}}Research Gap}{3}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {III}Methodology}{3}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {III-A}}Dataset}{3}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {III-B}}Architectures Compared}{3}{}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {I}{\ignorespaces The four architectures and their position on the attention spectrum.}}{3}{}\protected@file@percent }
+\newlabel{tab:architectures}{{I}{3}{}{}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {III-C}}Training Protocol}{3}{}\protected@file@percent }
+\citation{ref_bouthillier}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {III-D}}Evaluation Metrics and Statistical Testing Protocol}{4}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {IV}Results}{4}{}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {II}{\ignorespaces Performance comparison on the test split (mean $\pm $ standard deviation).}}{4}{}\protected@file@percent }
+\newlabel{tab:overall}{{II}{4}{}{}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {IV-A}}Effect of the Attention Mechanism}{4}{}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {1}{\ignorespaces Effect of the attention mechanism on mAP@0.5 on the test split. Error bars show the standard deviation across seeds. No attention-based variant surpasses YOLOv8s, and CBAM is in fact the lowest.}}{4}{}\protected@file@percent }
+\newlabel{fig:attention}{{1}{4}{}{}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {III}{\ignorespaces Paired t-test results for the mAP@0.5 difference.}}{4}{}\protected@file@percent }
+\newlabel{tab:ttest}{{III}{4}{}{}{}}
+\citation{ref17,ref18}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {IV-B}}Per-Class Performance}{5}{}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {2}{\ignorespaces Per-class performance of YOLOv8s on the test split. The helmet class is the most challenging because of its small size and visual ambiguity.}}{5}{}\protected@file@percent }
+\newlabel{fig:perclass}{{2}{5}{}{}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {IV-C}}Speed Trade-Off}{5}{}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {3}{\ignorespaces Accuracy (mAP@0.5) versus speed (FPS) trade-off. YOLOv8s occupies the most advantageous position because it leads on both axes simultaneously.}}{5}{}\protected@file@percent }
+\newlabel{fig:speed}{{3}{5}{}{}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {IV-D}}Qualitative Analysis}{5}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {V}Discussion}{5}{}\protected@file@percent }
+\citation{ref23}
+\citation{ref17,ref18}
+\@writefile{lof}{\contentsline {figure}{\numberline {4}{\ignorespaces Example of YOLOv8s detection output on a test image. The rider, the helmet, and the license plate are all detected simultaneously.}}{6}{}\protected@file@percent }
+\newlabel{fig:qualitative}{{4}{6}{}{}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {V-A}}The Dataset Is Relatively Small and Easy}{6}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {V-B}}Randomly Initialised Attention Layers Can Disrupt Pretrained Features}{6}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {V-C}}Complexity Is Not Free}{6}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {V-D}}The Cost of Errors Is Asymmetric in Safety Contexts}{6}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {V-E}}The Gap Toward Real Deployment}{6}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {V-F}}A Rival Hypothesis for the CBAM Reduction}{6}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {V-G}}Placement in the Broader Literature}{6}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {VI}Threats to Validity and Limitations}{7}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {VI-A}}Evaluation Limited to a Single, Relatively Clean Dataset}{7}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {VI-B}}RT-DETR-l Was Run on Only Two Seeds}{7}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {VI-C}}The Comparison Is Not Size-Matched}{7}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {VI-D}}Hyperparameter Confounding}{7}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {VI-E}}The Ceiling Effect Suppresses Statistical Power}{7}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {VI-F}}FPS Measured on a Single Configuration}{7}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {VI-G}}The CBAM Reduction May Be an Artefact of the Experimental Design}{7}{}\protected@file@percent }
+\bibcite{ref1}{1}
+\bibcite{ref3}{2}
+\bibcite{ref4}{3}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {VI-H}}A Single Dataset Without Difficulty Variation}{8}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {VI-I}}The Overall Number of Seeds Is Limited}{8}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {VI-J}}No Evaluation on a Size-Matched Attention-Based Architecture}{8}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {VII}Conclusion and Future Work}{8}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{References}{8}{}\protected@file@percent }
+\bibcite{ref5}{4}
+\bibcite{ref6}{5}
+\bibcite{ref7}{6}
+\bibcite{ref8}{7}
+\bibcite{ref9}{8}
+\bibcite{ref10}{9}
+\bibcite{ref11}{10}
+\bibcite{ref12}{11}
+\bibcite{ref13}{12}
+\bibcite{ref14}{13}
+\bibcite{ref15}{14}
+\bibcite{ref16}{15}
+\bibcite{ref17}{16}
+\bibcite{ref18}{17}
+\bibcite{ref23}{18}
+\bibcite{ref_terven}{19}
+\bibcite{ref_bouthillier}{20}
+\gdef \@abspage@last{9}
