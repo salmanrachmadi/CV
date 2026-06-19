@@ -106,6 +106,38 @@
 
 ---
 
+### YOLOv9 — Learning What You Want to Learn Using Programmable Gradient Information (2024)
+
+> C.-Y. Wang, I.-H. Yeh, and H.-Y. M. Liao, "YOLOv9: Learning What You Want to Learn Using Programmable Gradient Information," *arXiv preprint arXiv:2402.13616*, 2024.
+
+**Link:** [https://arxiv.org/abs/2402.13616](https://arxiv.org/abs/2402.13616)
+**What it is:** A real-time detector that introduces Programmable Gradient Information (PGI) to address the information bottleneck in deep networks, ensuring that gradients are properly propagated to update model weights. It also introduces the Generalized Efficient Layer Aggregation Network (GELAN).
+
+**Key contributions:**
+- Proposed PGI, containing auxiliary reversible branches, to resolve the information bottleneck during backpropagation.
+- Designed GELAN, which achieves high accuracy and parameter efficiency.
+- Outperformed YOLOv8 and other detectors on the COCO benchmark.
+
+**Use when citing:** Cite when discussing the state-of-the-art YOLO architectures, solutions to information bottleneck during training, or GELAN.
+
+---
+
+### YOLOv10 — Real-Time End-to-End Object Detection (2024)
+
+> A. Wang, H. Chen, L. Liu, K. Chen, Z. Lin, J. Han, and G. Ding, "YOLOv10: Real-Time End-to-End Object Detection," *arXiv preprint arXiv:2405.14458*, 2024.
+
+**Link:** [https://arxiv.org/abs/2405.14458](https://arxiv.org/abs/2405.14458)
+**What it is:** An end-to-end real-time object detector that eliminates the need for Non-Maximum Suppression (NMS) by using a dual-label assignment strategy (consistent matching during training and one-to-one during inference).
+
+**Key contributions:**
+- Proposed NMS-free training for YOLO, eliminating NMS latency.
+- Introduced efficiency-accuracy driven model design, leading to compact parameters and fast speed.
+- Achieved superior speed-accuracy trade-offs compared to previous YOLO models.
+
+**Use when citing:** Cite when discussing NMS-free YOLOs, real-time end-to-end object detectors, or model efficiency.
+
+---
+
 ## 3. Object Detection — Transformer-Based
 
 ---
@@ -192,6 +224,22 @@
 - Showed effectiveness on ImageNet classification, MS COCO detection, and VOC2007 detection.
 
 **Use when citing:** Cite as the attention module used in the YOLOv8s+CBAM variant. Cite when discussing channel-spatial attention or modular attention insertion into CNN backbones.
+
+---
+
+### Coordinate Attention — Coordinate Attention for Efficient Mobile Network Design (2021)
+
+> Q. Hou, D. Zhou, and J. Feng, "Coordinate attention for efficient mobile network design," in *Proc. IEEE Conf. Computer Vision and Pattern Recognition (CVPR)*, 2021, pp. 13708–13717.
+
+**Link:** [https://arxiv.org/abs/2103.02907](https://arxiv.org/abs/2103.02907)
+**What it is:** A lightweight attention mechanism for mobile networks that embeds positional information into channel attention. Instead of 2D global pooling, it factorizes 2D pooling into two 1D feature encodings along horizontal and vertical directions.
+
+**Key contributions:**
+- Proposed Coordinate Attention (CA) that captures direction-aware and position-sensitive information.
+- Designed a lightweight module that can be easily plugged into mobile networks (e.g., MobileNetV2, MobileNetV3) with minimal overhead.
+- Demonstrated improvements on ImageNet classification and COCO object detection.
+
+**Use when citing:** Cite when discussing lightweight attention modules, direction-aware spatial attention, or efficiency optimizations.
 
 ---
 
@@ -335,6 +383,38 @@
 
 ---
 
+### Feature Pyramid Networks — FPN (2017)
+
+> T.-Y. Lin, P. Dollár, R. Girshick, K. He, B. Hariharan, and S. Belongie, "Feature pyramid networks for object detection," in *Proc. IEEE Conf. Computer Vision and Pattern Recognition (CVPR)*, 2017, pp. 2117–2125.
+
+**Link:** [https://arxiv.org/abs/1612.03144](https://arxiv.org/abs/1612.03144)
+**What it is:** A multi-scale feature representation framework that builds a top-down pathway with lateral connections to construct high-level semantic feature maps at all scales, improving small-object detection.
+
+**Key contributions:**
+- Designed a feature pyramid network that extracts strong semantic features at multiple resolutions.
+- Demonstrated significant improvements in detecting small objects by exploiting high-resolution feature maps.
+- Standardized the backbone-neck design for modern detectors.
+
+**Use when citing:** Cite when discussing multi-scale feature fusion, top-down pathways, lateral connections, or small-object detection backbones.
+
+---
+
+### Path Aggregation Network — PANet (2018)
+
+> S. Liu, L. Qi, H. Qin, J. Shi, and J. Jia, "Path aggregation network for instance segmentation," in *Proc. IEEE Conf. Computer Vision and Pattern Recognition (CVPR)*, 2018, pp. 8759–8768.
+
+**Link:** [https://arxiv.org/abs/1803.01534](https://arxiv.org/abs/1803.01534)
+**What it is:** An enhancement to FPN that adds a bottom-up path augmentation to shorten the information path between lower and higher layers, and introduces adaptive feature pooling to propagate pixel-level details.
+
+**Key contributions:**
+- Proposed bottom-up path augmentation to propagate low-level spatial details to high-level features.
+- Introduced adaptive feature pooling to link all feature levels to subsequent subnetworks.
+- Outperformed FPN-based models on COCO benchmarks.
+
+**Use when citing:** Cite when discussing bottom-up feature fusion, PANet-style necks in YOLO architectures, or spatial-semantic trade-offs in detection.
+
+---
+
 ## 8. Helmet Detection — Application Studies
 
 ---
@@ -352,6 +432,38 @@
 - Reported results on urban traffic surveillance footage.
 
 **Use when citing:** Cite when discussing two-stage helmet detection pipelines, when contrasting single-stage and cascaded approaches, or when introducing license-plate-aware enforcement workflows.
+
+---
+
+### Chen et al. (2023) — Lightweight Helmet Detection using Improved YOLOv4
+
+> J. Chen, S. Deng, P. Wang, X. Huang, and Y. Liu, "Lightweight helmet detection algorithm using an improved YOLOv4," *Sensors*, vol. 23, no. 3, p. 1256, 2023.
+
+**Link:** [https://www.mdpi.com/1424-8220/23/3/1256](https://www.mdpi.com/1424-8220/23/3/1256)
+**What it is:** A lightweight safety helmet detection system using PP-LCNet as the backbone of YOLOv4, embedding Coordinate Attention modules to enhance feature extraction and utilizing SIoU loss for faster convergence.
+
+**Key contributions:**
+- Replaced YOLOv4 backbone with PP-LCNet and depthwise separable convolutions to reduce parameters by 83%.
+- Embedded Coordinate Attention into backbone layers to improve attention on helmet targets.
+- Replaced standard IoU with SIoU loss, achieving 92.98% accuracy at 43.23 FPS.
+
+**Use when citing:** Cite when discussing lightweight helmet detection, Coordinate Attention application in traffic/industrial compliance, or SIoU loss usage.
+
+---
+
+### Vasantha Kumar & Annapurna (2023) — YOLOv8 + Super-Resolution for Helmet Violations
+
+> J. C. Vasantha Kumar and V. K. Annapurna, "Real-Time Helmet-Violation Detection and Number-Plate Recognition with Super-Resolved YOLO Pipeline," in *Proc. 2nd Int. Conf. Automation, Computing and Renewable Systems (ICACRS)*, 2023, pp. 294--299.
+
+**Link:** [https://ieeexplore.ieee.org/document/10266060](https://ieeexplore.ieee.org/document/10266060)
+**What it is:** A combined real-time system that detects motorcycle helmet violations using YOLOv8 and applies super-resolution to cropped license plate images for automated violation logging.
+
+**Key contributions:**
+- Implemented a unified YOLOv8 pipeline for multi-class detection (helmeted, un-helmeted, license plates).
+- Applied super-resolution to enhance low-quality license plate crops.
+- Developed a database logging workflow for violation enforcement.
+
+**Use when citing:** Cite when discussing unified YOLOv8 helmet-license plate detection, super-resolution integration, or automated enforcement systems.
 
 ---
 

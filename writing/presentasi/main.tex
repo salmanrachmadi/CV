@@ -19,16 +19,16 @@
 \usepackage{multicol}
 
 % Custom colors
-\definecolor{probpose}{RGB}{41,128,185}
+\definecolor{yoloblue}{RGB}{41,128,185}
 \definecolor{accent}{RGB}{231,76,60}
 \definecolor{success}{RGB}{39,174,96}
 \definecolor{warning}{RGB}{243,156,18}
 
 % Title info
-\title[ProbPose]{\textbf{ProbPose: A Probabilistic Approach\\to 2D Human Pose Estimation}}
-\subtitle{Paper Review --- CVPR 2025\\{\small Miroslav Purkrabek \& Jiri Matas}}
+\title[Deteksi Helm]{\textbf{Perbandingan YOLOv8s, YOLO11s, dan YOLOv8s+CBAM\\untuk Deteksi Helm Pengendara Sepeda Motor}}
+\subtitle{Laporan Tugas Proyek --- Visual Komputer Lanjut}
 \author{Ardityo Cahyo \and Salman Rachmadi \and Ahmad Taufiq}
-\institute{Paper Review: Purkrabek \& Matas (CVPR 2025)}
+\institute{Fakultas Informatika \\ Universitas Telkom, Bandung}
 \date{}
 
 \begin{document}
@@ -43,698 +43,282 @@
 % ============================================================
 % OUTLINE
 % ============================================================
-\begin{frame}{Outline}
+\begin{frame}{Outline Presentasi}
 \begin{enumerate}
-    \item Apa itu Human Pose Estimation?
-    \item Bagaimana cara kerjanya? (Top-Down + Heatmap)
-    \item Masalah yang belum terselesaikan
-    \item ProbPose: Solusi probabilistik
-    \item Evaluasi baru: CropCOCO \& Ex-OKS
-    \item Hasil eksperimen
-    \item Demo
+    \item Latar Belakang \& Masalah
+    \item Pertanyaan Riset \& Hipotesis
+    \item Metodologi (Dataset, Model, \& Protokol Eksperimen)
+    \item Hasil Eksperimen (Akurasi, Kecepatan, \& Uji Statistik)
+    \item Analisis \& Pembahasan (Mengapa Atensi Gagal?)
+    \item Kesimpulan \& Saran
 \end{enumerate}
 \end{frame}
 
 % ============================================================
-% PART 1: WHAT IS POSE ESTIMATION
+% PART 1: BACKGROUND & RESEARCH QUESTION
 % ============================================================
-\section{Human Pose Estimation}
+\section{Pendahuluan}
 
-\begin{frame}{Apa itu Human Pose Estimation?}
-\begin{columns}
-\begin{column}{0.5\textwidth}
-\textbf{Tujuan:} Menemukan lokasi sendi-sendi tubuh manusia dalam gambar.
-
-\vspace{1em}
-\textbf{Output:} 17 titik koordinat $(x, y)$
-\begin{itemize}
-    \item Hidung, mata, telinga
-    \item Bahu, siku, pergelangan tangan
-    \item Pinggul, lutut, pergelangan kaki
-\end{itemize}
-\end{column}
-\begin{column}{0.5\textwidth}
-\centering
-\begin{tikzpicture}[scale=0.8]
-    % Skeleton
-    \node[circle,fill=accent,inner sep=2pt] (nose) at (0,4) {};
-    \node[circle,fill=probpose,inner sep=2pt] (ls) at (-0.8,3) {};
-    \node[circle,fill=probpose,inner sep=2pt] (rs) at (0.8,3) {};
-    \node[circle,fill=probpose,inner sep=2pt] (le) at (-1.3,2) {};
-    \node[circle,fill=probpose,inner sep=2pt] (re) at (1.3,2) {};
-    \node[circle,fill=probpose,inner sep=2pt] (lw) at (-1.6,1) {};
-    \node[circle,fill=probpose,inner sep=2pt] (rw) at (1.6,1) {};
-    \node[circle,fill=probpose,inner sep=2pt] (lh) at (-0.5,1.5) {};
-    \node[circle,fill=probpose,inner sep=2pt] (rh) at (0.5,1.5) {};
-    \node[circle,fill=probpose,inner sep=2pt] (lk) at (-0.6,0.5) {};
-    \node[circle,fill=probpose,inner sep=2pt] (rk) at (0.6,0.5) {};
-    \node[circle,fill=probpose,inner sep=2pt] (la) at (-0.7,-0.5) {};
-    \node[circle,fill=probpose,inner sep=2pt] (ra) at (0.7,-0.5) {};
-    % Connections
-    \draw[thick,gray] (nose)--(ls) (nose)--(rs);
-    \draw[thick,gray] (ls)--(le)--(lw) (rs)--(re)--(rw);
-    \draw[thick,gray] (ls)--(lh) (rs)--(rh);
-    \draw[thick,gray] (lh)--(lk)--(la) (rh)--(rk)--(ra);
-    \node[below] at (0,-1) {\small 17 keypoints (COCO)};
-\end{tikzpicture}
-\end{column}
-\end{columns}
-\end{frame}
-
-% ============================================================
-% PART 2: HOW IT WORKS
-% ============================================================
-\section{Cara Kerja}
-
-\begin{frame}{Pendekatan Top-Down}
-\centering
-\begin{tikzpicture}[node distance=1.5cm, >=Stealth,
-    box/.style={rectangle, draw, rounded corners, minimum width=2.8cm, minimum height=0.8cm, align=center, font=\small}]
-    
-    \node[box, fill=blue!10] (input) {Foto asli};
-    \node[box, fill=orange!10, right=of input] (detect) {Object Detector\\(YOLOX)};
-    \node[box, fill=green!10, right=of detect] (crop) {Crop \& Resize\\$256\times192$};
-    \node[box, fill=purple!10, right=of crop] (model) {Pose Model};
-    \node[box, fill=red!10, right=of model] (output) {17 Keypoints\\$(x, y)$};
-    
-    \draw[->,thick] (input) -- (detect);
-    \draw[->,thick] (detect) -- (crop);
-    \draw[->,thick] (crop) -- (model);
-    \draw[->,thick] (model) -- (output);
-\end{tikzpicture}
-
-\vspace{1.5em}
-\begin{itemize}
-    \item Deteksi orang $\rightarrow$ Crop per orang $\rightarrow$ Estimasi pose per orang
-    \item Akurasi tinggi karena fokus satu orang per inferensi
-\end{itemize}
-\end{frame}
-
-\begin{frame}{Heatmap: Cara Model ``Menunjuk'' Lokasi Sendi}
-\begin{columns}
-\begin{column}{0.55\textwidth}
-\begin{itemize}
-    \item Model output \textbf{17 peta} (satu per sendi)
-    \item Setiap peta berukuran $64\times48$
-    \item Nilai tinggi = ``sendi kemungkinan di sini''
-    \item Koordinat akhir = titik paling terang (\texttt{argmax})
-\end{itemize}
-
-\vspace{1em}
-\textbf{Training:}\\
-Target = Gaussian 2D di lokasi ground truth\\
-Loss = MSE (Mean Squared Error)
-\end{column}
-\begin{column}{0.45\textwidth}
-\centering
-\begin{tikzpicture}[scale=0.6]
-    \draw[step=1,gray!30,thin] (0,0) grid (6,6);
-    \draw[thick] (0,0) rectangle (6,6);
-    % Gaussian blob
-    \fill[red!5] (2,2) circle (2.5);
-    \fill[red!15] (2.5,3) circle (2);
-    \fill[red!30] (3,3.2) circle (1.5);
-    \fill[red!50] (3.2,3.3) circle (1);
-    \fill[red!80] (3.3,3.4) circle (0.5);
-    \fill[accent] (3.3,3.4) circle (0.15);
-    \node[below,font=\small] at (3,0) {Heatmap ``lutut kiri''};
-    \draw[->,thick,accent] (4.5,5) -- (3.5,3.7);
-    \node[right,font=\footnotesize,accent] at (4.5,5) {argmax};
-\end{tikzpicture}
-\end{column}
-\end{columns}
-\end{frame}
-
-% ============================================================
-% PART 3: THE PROBLEMS
-% ============================================================
-\section{Masalah}
-
-\begin{frame}{Masalah 1: Keypoint di Luar Gambar}
-\begin{columns}
-\begin{column}{0.45\textwidth}
-\centering
-\includegraphics[width=\linewidth,height=0.7\textheight,keepaspectratio]{gambar/figure1.png}
-
-{\tiny\textit{Figure 1: ProbPose (kiri) vs ViTPose (kanan)}}
-\end{column}
-\begin{column}{0.55\textwidth}
-\textbf{Apa yang terjadi:}
-\begin{itemize}
-    \item Bounding box tidak selalu mencakup seluruh tubuh
-    \item Beberapa sendi \textcolor{accent}{terpotong}
-\end{itemize}
-
-\vspace{1em}
-\textbf{Model konvensional:}
-\begin{itemize}
-    \item Tidak bisa bilang ``tidak ada''
-    \item Asal menebak lokasi $\rightarrow$ \textcolor{accent}{salah}
-    \item Evaluasi (OKS) \textbf{mengabaikan} masalah ini
-\end{itemize}
-
-\vspace{0.5em}
-{\small\textcolor{success}{ProbPose} memprediksi kaki kanan di luar gambar dengan benar. \textcolor{accent}{ViTPose} menempelkan kaki kanan ke kaki kiri.}
-\end{column}
-\end{columns}
-\end{frame}
-
-\begin{frame}{Masalah 2: Heatmap Tidak Terkalibrasi}
-\begin{columns}
-\begin{column}{0.5\textwidth}
-\textbf{Heatmap konvensional:}
-\begin{itemize}
-    \item Nilai bukan probabilitas sesungguhnya
-    \item Bentuk dipaksa Gaussian (sigma tetap)
-    \item Tidak bisa mengekspresikan \textit{ketidakpastian}
-\end{itemize}
-
-\vspace{1em}
-\textbf{Dampak:}
-\begin{itemize}
-    \item Tidak bisa jawab: ``seberapa yakin?''
-    \item Berbahaya untuk aplikasi safety-critical
-    \item Robot, self-driving, medis
-\end{itemize}
-\end{column}
-\begin{column}{0.5\textwidth}
-\centering
-\begin{tikzpicture}[scale=0.55]
-    % Case 1: certain
-    \draw[thick] (0,3) rectangle (4,6);
-    \node[above,font=\footnotesize\bfseries] at (2,6) {Kasus mudah};
-    \fill[red!60] (2,4.5) circle (0.4);
-    \fill[red!20] (2,4.5) circle (0.8);
-    \node[below,font=\tiny] at (2,3) {Seharusnya: tajam};
-    
-    % Case 2: uncertain
-    \draw[thick] (5,3) rectangle (9,6);
-    \node[above,font=\footnotesize\bfseries] at (7,6) {Kasus sulit};
-    \fill[red!20] (7,4.5) circle (1.2);
-    \fill[red!35] (7,4.5) circle (0.8);
-    \node[below,font=\tiny] at (7,3) {Seharusnya: menyebar};
-    
-    % Arrow
-    \draw[->,very thick,accent] (2,2.5) -- (2,1.5);
-    \draw[->,very thick,accent] (7,2.5) -- (7,1.5);
-    
-    % Forced same
-    \draw[thick] (0,0) rectangle (4,1.2);
-    \fill[red!40] (2,0.6) circle (0.6);
-    \draw[thick] (5,0) rectangle (9,1.2);
-    \fill[red!40] (7,0.6) circle (0.6);
-    \node[below,font=\tiny,accent] at (4.5,-0.2) {Dipaksa bentuk SAMA!};
-\end{tikzpicture}
-\end{column}
-\end{columns}
-\end{frame}
-
-% ============================================================
-% PART 4: PROBPOSE SOLUTION
-% ============================================================
-\section{ProbPose}
-
-\begin{frame}{ProbPose: Ide Utama}
-\centering
-\vspace{0.5em}
-{\large Model konvensional hanya bisa bilang:}\\[0.3em]
-{\Large\bfseries ``Sendi ada \textcolor{probpose}{DI SINI}.''}
-
-\vspace{1.5em}
-{\large ProbPose bisa bilang \textbf{4 hal}:}
-
-\vspace{0.8em}
-\begin{tabular}{cl}
-\textcolor{probpose}{\textbf{1.}} & Di mana sendi ini? \textit{(Probability Map)} \\[0.5em]
-\textcolor{probpose}{\textbf{2.}} & Apakah sendi ini ada di gambar? \textit{(Presence Score)} \\[0.5em]
-\textcolor{probpose}{\textbf{3.}} & Seberapa bagus tebakan saya? \textit{(Quality Score)} \\[0.5em]
-\textcolor{probpose}{\textbf{4.}} & Apakah sendi terlihat atau terhalang? \textit{(Visibility)} \\
-\end{tabular}
-\end{frame}
-
-\begin{frame}{Arsitektur ProbPose}
-\centering
-\begin{tikzpicture}[node distance=0.8cm, >=Stealth, scale=0.85, every node/.style={scale=0.85},
-    box/.style={rectangle, draw, rounded corners, minimum width=2.5cm, minimum height=0.7cm, align=center, font=\small}]
-    
-    \node[box, fill=blue!10] (input) {Gambar $256\times192$};
-    \node[box, fill=blue!20, right=1.5cm of input] (backbone) {Backbone\\(ViT-Small)};
-    
-    % Heads
-    \node[box, fill=red!15, above right=0.3cm and 1.8cm of backbone] (h1) {Probability Map\\$64\times48\times17$};
-    \node[box, fill=orange!15, below=0.2cm of h1] (h2) {Presence Score\\$17$ angka};
-    \node[box, fill=green!15, below=0.2cm of h2] (h3) {Quality Score\\$17$ angka};
-    \node[box, fill=purple!15, below=0.2cm of h3] (h4) {Visibility\\$17$ angka};
-    
-    \draw[->,thick] (input) -- (backbone);
-    \draw[->,thick] (backbone.east) -- ++(0.5,0) |- (h1.west);
-    \draw[->,thick] (backbone.east) -- ++(0.5,0) |- (h2.west);
-    \draw[->,thick] (backbone.east) -- ++(0.5,0) |- (h3.west);
-    \draw[->,thick] (backbone.east) -- ++(0.5,0) |- (h4.west);
-    
-    \node[right=0.3cm of h1,font=\footnotesize,red!70!black] {Sparsemax (sum=1)};
-    \node[right=0.3cm of h2,font=\footnotesize,orange!70!black] {Sigmoid};
-    \node[right=0.3cm of h3,font=\footnotesize,green!70!black] {Sigmoid};
-    \node[right=0.3cm of h4,font=\footnotesize,purple!70!black] {Sigmoid};
-\end{tikzpicture}
-\end{frame}
-
-\begin{frame}{Output 1: Probability Map}
-\begin{columns}
-\begin{column}{0.5\textwidth}
-\textbf{Heatmap konvensional:}
-\begin{itemize}
-    \item Setiap piksel independen
-    \item Total bisa berapa saja
-    \item Bukan probabilitas
-\end{itemize}
-
-\vspace{1em}
-\textbf{Probability Map (ProbPose):}
-\begin{itemize}
-    \item Semua piksel \textbf{berbagi 100\%}
-    \item Total selalu = 1
-    \item Probabilitas sesungguhnya
-    \item Bentuk bebas (adaptif)
-\end{itemize}
-\end{column}
-\begin{column}{0.5\textwidth}
-\centering
-\begin{tikzpicture}[scale=0.6]
-    % Heatmap
-    \draw[thick] (0,4) rectangle (4,7);
-    \node[above,font=\footnotesize\bfseries] at (2,7) {Heatmap (sum $\neq$ 1)};
-    \fill[red!30] (1.5,5.5) circle (0.7);
-    \fill[red!50] (1.5,5.5) circle (0.4);
-    \fill[red!30] (3,5.2) circle (0.5);
-    
-    % Prob map
-    \draw[thick] (0,0) rectangle (4,3);
-    \node[above,font=\footnotesize\bfseries,probpose] at (2,3) {Prob Map (sum = 1)};
-    \fill[probpose!40] (2,1.5) circle (0.9);
-    \fill[probpose!70] (2,1.5) circle (0.5);
-    \fill[probpose] (2,1.5) circle (0.15);
-    \node[right,font=\tiny] at (3.2,1.5) {55\%};
-    \node[right,font=\tiny] at (3.2,1) {20\%};
-    \node[right,font=\tiny] at (3.2,0.5) {dst...};
-    
-    \draw[->,very thick,probpose] (2,3.8) -- (2,3.2);
-    \node[right,font=\tiny,probpose] at (2.2,3.5) {Sparsemax};
-\end{tikzpicture}
-\end{column}
-\end{columns}
-\end{frame}
-
-\begin{frame}{Output 2: Presence Score}
-\centering
-\vspace{0.5em}
-{\large ``Apakah sendi ini \textbf{ada} di dalam gambar?''}
-
-\vspace{1.5em}
-\begin{tikzpicture}[scale=0.8]
-    % Image with full body
-    \draw[thick,success] (0,0) rectangle (2.5,4);
-    \node[above,font=\small\bfseries,success] at (1.25,4) {Terlihat lengkap};
-    \node[font=\footnotesize] at (1.25,2) {Presence:};
-    \node[font=\footnotesize,success] at (1.25,1.5) {Semua $\approx$ 0.95};
-    
-    % Image with cropped legs
-    \draw[thick,warning] (4,0) rectangle (6.5,4);
-    \node[above,font=\small\bfseries,warning] at (5.25,4) {Kaki terpotong};
-    \node[font=\footnotesize] at (5.25,2.5) {Bahu: 0.97};
-    \node[font=\footnotesize] at (5.25,2) {Tangan: 0.91};
-    \node[font=\footnotesize,accent] at (5.25,1.2) {Lutut: 0.08};
-    \node[font=\footnotesize,accent] at (5.25,0.7) {Kaki: 0.03};
-    
-    % Arrow
-    \draw[->,very thick] (8,2.5) -- (8,1.5);
-    \node[right,font=\small] at (8.2,2) {Threshold};
-    \node[font=\small,align=left] at (9.5,0.8) {$< 0.5$: abaikan\\$\geq 0.5$: percaya};
-\end{tikzpicture}
-
-\vspace{1em}
-\textbf{Model konvensional tidak punya kemampuan ini.}
-\end{frame}
-
-\begin{frame}{Output 3 \& 4: Quality Score \& Visibility}
-\begin{columns}
-\begin{column}{0.5\textwidth}
-\textbf{Quality Score:}\\[0.5em]
-``Seberapa bagus tebakan lokasi saya?''
-
-\vspace{0.5em}
-\begin{itemize}
-    \item Self-assessment model
-    \item Ditraining terhadap OKS sesungguhnya
-    \item Terkalibrasi (angka bermakna)
-    \item Berguna saat inferensi (tanpa ground truth)
-\end{itemize}
-\end{column}
-\begin{column}{0.5\textwidth}
-\textbf{Visibility:}\\[0.5em]
-``Apakah sendi terlihat atau terhalang?''
-
-\vspace{0.5em}
-\begin{itemize}
-    \item Visible: terlihat langsung
-    \item Occluded: ada tapi ketutupan
-    \item Target dari anotasi COCO
-    \item Berbeda dari presence (posisi vs halangan)
-\end{itemize}
-\end{column}
-\end{columns}
-
-\vspace{1em}
-\centering
-\begin{tikzpicture}
-\node[draw,rounded corners,fill=blue!5,minimum width=10cm,minimum height=1cm,align=center,font=\small] {
-    \textbf{Presence}: ada di gambar? \quad
-    \textbf{Quality}: tebakan bagus? \quad
-    \textbf{Visibility}: terlihat?
-};
-\end{tikzpicture}
-\end{frame}
-
-\begin{frame}{Loss Functions}
-\centering
-\vspace{0.5em}
-\textbf{4 output $\rightarrow$ 4 loss function}
-
-\vspace{1em}
-\begin{tabular}{lll}
-\toprule
-\textbf{Output} & \textbf{Loss} & \textbf{Target} \\
-\midrule
-Probability Map & OKS Heatmap Loss & OKS map \\
-Presence Score & Binary Cross Entropy & 0 atau 1 \\
-Quality Score & MSE & Skor OKS sesungguhnya \\
-Visibility & Binary Cross Entropy & 0 atau 1 \\
-\bottomrule
-\end{tabular}
-
-\vspace{1.5em}
-$$\mathcal{L}_{total} = \mathcal{L}_{OKS} + \mathcal{L}_{presence} + \mathcal{L}_{quality} + \mathcal{L}_{visibility}$$
-
-\vspace{0.5em}
-{\small Semua head ditraining bersamaan, tapi hanya heatmap head yang melatih backbone.}
-\end{frame}
-
-\begin{frame}{OKS: Object Keypoint Similarity}
-\begin{columns}
-\begin{column}{0.55\textwidth}
-\textbf{Metrik evaluasi utama} untuk pose estimation:
-
-$$\text{OKS} = \exp\left(\frac{-d^2}{2 \cdot s^2 \cdot k^2}\right)$$
-
-\begin{itemize}
-    \item $d$ = jarak prediksi vs ground truth
-    \item $s$ = skala (ukuran orang)
-    \item $k$ = konstanta per keypoint
-\end{itemize}
-
-\vspace{0.5em}
-Nilai: $0$ (salah total) $\rightarrow$ $1$ (sempurna)
-\end{column}
-\begin{column}{0.45\textwidth}
-\centering
-\textbf{Toleransi berbeda per sendi:}
-
-\vspace{0.5em}
-\begin{tabular}{ll}
-\footnotesize Hidung & \footnotesize $k$ kecil (ketat) \\
-\footnotesize Bahu & \footnotesize $k$ sedang \\
-\footnotesize Pinggul & \footnotesize $k$ besar (longgar) \\
-\end{tabular}
-
-\vspace{1em}
-{\small Karena variasi antar-anotator manusia berbeda per sendi.}
-\end{column}
-\end{columns}
-\end{frame}
-
-\begin{frame}{Expected OKS Maximization (Decoding)}
-\begin{columns}
-\begin{column}{0.45\textwidth}
-\textbf{Konvensional (argmax/UDP):}
-\begin{itemize}
-    \item Ambil titik tertinggi
-    \item Refine lokal
-    \item Bisa tertipu oleh spike tajam
-\end{itemize}
-
-\vspace{1em}
-\textbf{ProbPose (Expected OKS):}
-\begin{itemize}
-    \item Hitung expected OKS per piksel
-    \item Pilih yang memaksimalkan skor
-    \item Lebih robust untuk distribusi bimodal
-\end{itemize}
-\end{column}
-\begin{column}{0.55\textwidth}
-\centering
-\includegraphics[width=\linewidth,height=0.7\textheight,keepaspectratio]{gambar/figure3.png}
-
-{\tiny\textit{Figure 3: UDP decoding (kiri) vs Expected OKS maximization (kanan)}}
-\end{column}
-\end{columns}
-\end{frame}
-
-% ============================================================
-% PART 5: EVALUATION
-% ============================================================
-\section{Evaluasi Baru}
-
-\begin{frame}{CropCOCO Dataset}
-\begin{columns}
-\begin{column}{0.5\textwidth}
-\textbf{Masalah:}\\
-COCO biasa jarang punya keypoint di luar gambar $\rightarrow$ tidak bisa mengukur kemampuan model.
-
-\vspace{1em}
-\textbf{Solusi: CropCOCO}\\
-Gambar COCO di-crop lebih agresif sehingga banyak keypoint jatuh di luar frame.
-
-\vspace{1em}
-\textbf{Tujuan:}\\
-Mengukur kemampuan model menangani out-of-image keypoints.
-\end{column}
-\begin{column}{0.5\textwidth}
-\centering
-\begin{tikzpicture}[scale=0.65]
-    % COCO normal
-    \draw[thick,success] (0,3) rectangle (3.5,7);
-    \node[above,font=\small\bfseries,success] at (1.75,7) {COCO};
-    % stick figure inside
-    \draw[gray,thick] (1.75,6.5) -- (1.75,4.5);
-    \draw[gray,thick] (1.75,6) -- (1,5.5) (1.75,6) -- (2.5,5.5);
-    \draw[gray,thick] (1.75,4.5) -- (1.2,3.5) (1.75,4.5) -- (2.3,3.5);
-    \fill[success] (1.75,6.5) circle (0.1);
-    \node[below,font=\tiny] at (1.75,3) {Semua sendi di dalam};
-    
-    % CropCOCO
-    \draw[thick,accent] (5,4) rectangle (8.5,7);
-    \node[above,font=\small\bfseries,accent] at (6.75,7) {CropCOCO};
-    % stick figure partially outside
-    \draw[gray,thick] (6.75,6.5) -- (6.75,4.5);
-    \draw[gray,thick] (6.75,6) -- (6,5.5) (6.75,6) -- (7.5,5.5);
-    \draw[gray,thick,dashed] (6.75,4.5) -- (6.2,3.5) (6.75,4.5) -- (7.3,3.5);
-    \fill[success] (6.75,6.5) circle (0.1);
-    \fill[accent] (6.2,3.5) circle (0.1);
-    \fill[accent] (7.3,3.5) circle (0.1);
-    \node[below,font=\tiny] at (6.75,3) {Kaki di luar frame};
-\end{tikzpicture}
-\end{column}
-\end{columns}
-\end{frame}
-
-\begin{frame}{Ex-OKS: Extended OKS}
-\centering
-\vspace{0.5em}
-{\large OKS biasa \textbf{mengabaikan} keypoint di luar gambar.\\Ex-OKS \textbf{menghukum} false positive.}
-
-\vspace{1em}
-\begin{tabular}{lcc}
-\toprule
-\textbf{Situasi} & \textbf{OKS} & \textbf{Ex-OKS} \\
-\midrule
-KP di dalam + prediksi benar & skor tinggi & skor tinggi \\
-KP di dalam + prediksi salah & skor rendah & skor rendah \\
-KP di luar + model bilang ``tidak ada'' & \textcolor{gray}{diabaikan} & \textcolor{success}{skor tinggi} \\
-KP di luar + model bilang ``ada'' & \textcolor{gray}{diabaikan} & \textcolor{accent}{skor rendah} \\
-\bottomrule
-\end{tabular}
-
-\vspace{1.5em}
-\textbf{Ex-OKS menghargai model yang jujur bilang ``tidak tahu.''}
-\end{frame}
-
-% ============================================================
-% PART 6: RESULTS
-% ============================================================
-\section{Hasil Eksperimen}
-
-\begin{frame}{Hasil: Perbandingan dengan SOTA}
-\centering
-\vspace{0.3em}
-{\small Semua model berukuran serupa. Evaluasi menggunakan GT bounding boxes.}
-
-\vspace{0.8em}
-\begin{tabular}{l|cc|cc|cc}
-\toprule
-& \multicolumn{2}{c|}{\textbf{COCO}} & \multicolumn{2}{c|}{\textbf{CropCOCO}} & \multicolumn{2}{c}{\textbf{OCHuman}} \\
-\textbf{Model} & mAP & Ex-mAP & mAP & Ex-mAP & mAP & Ex-mAP \\
-\midrule
-ViTPose-s & 75.9 & 75.3 & 72.7 & 66.5 & 60.3 & 60.1 \\
-HRFormer-s & 75.2 & 74.6 & 70.9 & 64.3 & 60.3 & 60.0 \\
-SWIN-t & 73.5 & 72.9 & 71.3 & 65.0 & 58.1 & 57.9 \\
-\midrule
-\textbf{ProbPose-s} & \textbf{76.6} & \textbf{76.4} & \textbf{81.7} & \textbf{73.9} & 60.4 & 60.2 \\
-\bottomrule
-\end{tabular}
-
-\vspace{1em}
-\begin{itemize}
-    \item COCO: peningkatan kecil (+0.7\% vs ViTPose)
-    \item \textcolor{success}{\textbf{CropCOCO: peningkatan signifikan (+9.0\%)}} $\leftarrow$ kontribusi utama
-    \item OCHuman: kompetitif
-\end{itemize}
-\end{frame}
-
-\begin{frame}{Ablation Study}
-\centering
-\vspace{0.5em}
-{\small Apa yang paling berkontribusi?}
-
-\vspace{1em}
-\begin{tabular}{cc|cc}
-\toprule
-\textbf{Prob. Map} & \textbf{Crop Aug.} & \textbf{COCO mAP} & \textbf{CropCOCO mAP} \\
-\midrule
-\texttimes & \texttimes & 76.0 & 73.7 \\
-\texttimes & \checkmark & 76.4 & 72.4 \\
-\checkmark & \texttimes & 76.6 & 81.7 \\
-\checkmark & \checkmark & \textbf{76.6} & \textbf{81.7} \\
-\bottomrule
-\end{tabular}
-
-\vspace{1.5em}
-\textbf{Temuan:}
-\begin{itemize}
-    \item Crop augmentation = kontributor utama untuk CropCOCO
-    \item Probability map = keunggulan di versatility, bukan akurasi murni
-    \item Kombinasi keduanya = hasil terbaik
-\end{itemize}
-\end{frame}
-
-\begin{frame}{Presence Probability vs Confidence}
-\begin{columns}
-\begin{column}{0.5\textwidth}
-\textbf{Klasifikasi in/out-of-image:}
-
-\vspace{0.5em}
-\begin{itemize}
-    \item ProbPose presence probability\\mengurangi error \textbf{30--45\%}\\dibanding confidence ViTPose
-    \item Confidence tidak ditraining untuk tugas ini
-    \item Threshold optimal: 0.15--0.4\\(bukan 0.3 yang umum dipakai)
-\end{itemize}
-\end{column}
-\begin{column}{0.5\textwidth}
-\centering
-\begin{tikzpicture}[scale=0.7]
-    \draw[->] (0,0) -- (5,0) node[right,font=\tiny] {threshold};
-    \draw[->] (0,0) -- (0,4) node[above,font=\tiny] {accuracy};
-    % ProbPose curve (higher)
-    \draw[thick,probpose] plot[smooth] coordinates {(0.5,1.5) (1,2.8) (1.5,3.3) (2,3.5) (2.5,3.5) (3,3.4) (3.5,3.2) (4,2.8) (4.5,2)};
-    % ViTPose curve (lower)
-    \draw[thick,accent] plot[smooth] coordinates {(0.5,1) (1,2) (1.5,2.5) (2,2.8) (2.5,2.9) (3,2.8) (3.5,2.5) (4,2) (4.5,1.5)};
-    \node[font=\tiny,probpose] at (3.5,3.8) {ProbPose};
-    \node[font=\tiny,accent] at (3.5,2.2) {ViTPose};
-\end{tikzpicture}
-\end{column}
-\end{columns}
-\end{frame}
-
-% ============================================================
-% PART 7: LIMITATIONS & CONCLUSION
-% ============================================================
-\section{Limitasi \& Kesimpulan}
-
-\begin{frame}{Limitasi}
-\begin{enumerate}
-    \item \textbf{Peningkatan in-image kecil} (+0.7\% di COCO)\\
-    {\small Untuk kasus normal, manfaat minimal}
-    
-    \vspace{0.5em}
-    \item \textbf{Hanya model Small}\\
-    {\small Belum diuji pada backbone besar (ViTPose-L, -H)}
-    
-    \vspace{0.5em}
-    \item \textbf{Multi-person belum dieksplorasi}\\
-    {\small Crowded scene dengan banyak orang tumpang tindih}
-    
-    \vspace{0.5em}
-    \item \textbf{Bergantung pada crop augmentation}\\
-    {\small Tanpa itu, probability map justru menurunkan performa}
-    
-    \vspace{0.5em}
-    \item \textbf{Anotasi COCO bermasalah di tepi}\\
-    {\small Model dihukum karena lebih akurat dari ground truth}
-\end{enumerate}
-\end{frame}
-
-\begin{frame}{Kesimpulan}
+\begin{frame}{Latar Belakang \& Masalah}
 \begin{columns}
 \begin{column}{0.6\textwidth}
-\textbf{Kontribusi ProbPose:}
-\begin{enumerate}
-    \item \textbf{Probability map} $\rightarrow$ distribusi terkalibrasi (sum=1)
-    \item \textbf{Presence probability} $\rightarrow$ error turun 45\%
-    \item \textbf{OKS-based loss} $\rightarrow$ training selaras dengan evaluasi
-    \item \textbf{CropCOCO + Ex-OKS} $\rightarrow$ evaluasi yang lebih lengkap
-    \item \textbf{Crop augmentation} $\rightarrow$ +9\% di out-of-image
-\end{enumerate}
+\textbf{Pentingnya Deteksi Helm:}
+\begin{itemize}
+    \item Helm merupakan pelindung utama pengendara motor dari cedera kepala fatal dalam kecelakaan lalu lintas.
+    \item Pemantauan kepatuhan secara manual oleh petugas tidak efisien dan tidak dapat diskalakan untuk volume lalu lintas nyata.
+    \item Diperlukan otomatisasi berbasis \textbf{Computer Vision} (deteksi objek) menggunakan kamera CCTV jalan raya.
+\end{itemize}
 
-\vspace{1em}
-\textbf{Pesan utama:}\\
-{\small Pose estimation bukan hanya soal akurasi lokalisasi, tapi juga soal \textit{kejujuran} model --- tahu kapan harus bilang ``tidak tahu.''}
+\vspace{0.5em}
+\textbf{Masalah di Literatur:}
+\begin{itemize}
+    \item Banyak riset mengklaim menambahkan mekanisme atensi (misal: CBAM) meningkatkan akurasi deteksi helm.
+    \item Namun, laporan tersebut seringkali mengabaikan pengujian statistik yang ketat (uji signifikansi) dan evaluasi multi-seed untuk mengontrol faktor kebetulan inisialisasi.
+\end{itemize}
 \end{column}
 \begin{column}{0.4\textwidth}
 \centering
-\begin{tikzpicture}[scale=0.6]
-    \node[draw,rounded corners,fill=probpose!10,minimum width=3.5cm,minimum height=1cm,align=center,font=\small] at (0,3) {Probability Map\\(lokasi)};
-    \node[draw,rounded corners,fill=orange!10,minimum width=3.5cm,minimum height=1cm,align=center,font=\small] at (0,1.5) {Presence\\(ada/tidak)};
-    \node[draw,rounded corners,fill=green!10,minimum width=3.5cm,minimum height=1cm,align=center,font=\small] at (0,0) {Quality\\(seberapa bagus)};
-    \node[draw,rounded corners,fill=purple!10,minimum width=3.5cm,minimum height=1cm,align=center,font=\small] at (0,-1.5) {Visibility\\(terlihat/tidak)};
+\begin{tikzpicture}[scale=0.8]
+    \draw[thick, rounded corners, fill=yoloblue!10] (0,3) rectangle (4,4.5) node[midway, align=center] {\small Pemantauan\\Manual};
+    \draw[->, thick, accent] (2,3) -- (2,2) node[midway, right] {\small Lambat, Mahal};
+    \draw[thick, rounded corners, fill=success!10] (0,0.5) rectangle (4,2) node[midway, align=center] {\small Deteksi Otomatis\\(YOLO + Atensi?)};
 \end{tikzpicture}
 \end{column}
 \end{columns}
 \end{frame}
 
-% ============================================================
-% DEMO & REFERENCES
-% ============================================================
-\section{Demo}
+\begin{frame}{Pertanyaan Riset \& Hipotesis}
+\textbf{Pertanyaan Riset:}
+\begin{block}{}
+Apakah penambahan mekanisme atensi (seperti blok C2PSA pada YOLO11 atau modul CBAM pada YOLOv8) meningkatkan akurasi deteksi helm secara signifikan dalam kondisi pengujian multi-seed yang terkontrol?
+\end{block}
 
-\begin{frame}{Demo: Implementasi}
+\vspace{1.5em}
+\textbf{Hipotesis Kerja:}
+\begin{itemize}
+    \item \textbf{YOLO11s} (memiliki blok \textit{positional self-attention} C2PSA) sebagai arsitektur yang lebih baru akan menghasilkan akurasi (mAP) yang lebih tinggi dibandingkan baseline \textbf{YOLOv8s} (tanpa atensi).
+    \item Penambahan modul \textbf{CBAM} (atensi saluran dan spasial) pada YOLOv8s akan meningkatkan akurasi lokalisasi kelas kecil (helm dan plat nomor).
+\end{itemize}
+\end{frame}
+
+% ============================================================
+% PART 2: METHODOLOGY
+% ============================================================
+\section{Metodologi}
+
+\begin{frame}{Dataset \& Kelas Target}
+\begin{columns}
+\begin{column}{0.55\textwidth}
+\textbf{Karakteristik Dataset:}
+\begin{itemize}
+    \item Menggunakan dataset publik Roboflow Universe: \textbf{NCKH 2023 Helmet Detection Project (v19)}.
+    \item Total \textbf{1.803 gambar} dengan pembagian split tetap:
+    \begin{itemize}
+        \item \textbf{Train:} 1.563 gambar
+        \item \textbf{Val:} 140 gambar
+        \item \textbf{Test:} 100 gambar (evaluasi akhir)
+    \end{itemize}
+    \item Resolusi input ditingkatkan ke \textbf{1280 piksel} untuk mempertahankan detail spasial objek kecil.
+\end{itemize}
+\end{column}
+\begin{column}{0.45\textwidth}
+\textbf{3 Kelas Target Deteksi:}
+\begin{enumerate}
+    \item \textbf{\texttt{motorcyclist}:} Pengendara sepeda motor (sebagai konteks utama).
+    \item \textbf{\texttt{helmet}:} Helm yang digunakan (objek kepatuhan).
+    \item \textbf{\texttt{license\_plate}:} Plat nomor kendaraan (sebagai jangkar identifikasi pelanggar).
+\end{enumerate}
+\end{column}
+\end{columns}
+\end{frame}
+
+\begin{frame}{Arsitektur Model yang Dibandingkan}
 \centering
-\vspace{0.5em}
-\textbf{Stack yang digunakan:}
-
-\vspace{1em}
-\begin{tabular}{ll}
+\begin{tabular}{llcc}
 \toprule
-Framework & MMPose (OpenMMLab) \\
-Backbone & Vision Transformer Small (ViT-S) \\
-Head & ProbMapHead (custom) \\
-Input & $256 \times 192$ \\
-Output & $64 \times 48 \times 17$ probability maps \\
-Weights & ProbPose-s.pth (pre-trained) \\
-Detector & YOLOX (untuk multi-person) \\
+\textbf{Model} & \textbf{Jenis Atensi} & \textbf{Jumlah Parameter} & \textbf{Peran Eksperimen} \\
+\midrule
+\textbf{YOLOv8s} & None & $\sim$11,17 Juta & Baseline (Pure CNN) \\
+\textbf{YOLO11s} & Partial (C2PSA) & $\sim$9,40 Juta & State-of-the-Art (Self-Attention) \\
+\textbf{YOLOv8s+CBAM} & Channel + Spatial & $\sim$11,51 Juta & Intervensi Atensi Tambahan \\
 \bottomrule
 \end{tabular}
 
 \vspace{1.5em}
-{\small Kode tersedia di: \texttt{github.com/MiraPurkrabek/ProbPose\_code}}
+\begin{columns}
+\begin{column}{0.9\textwidth}
+\begin{itemize}
+    \item \textbf{YOLOv8s+CBAM} dibuat dengan menyisipkan 3 modul CBAM tepat sebelum kepala deteksi (skala P3, P4, P5) untuk meminimalkan perbedaan arsitektural di luar mekanisme atensi itu sendiri.
+    \item Parameter bertambah $\sim 3\%$ dari baseline YOLOv8s.
+\end{itemize}
+\end{column}
+\end{columns}
+\end{frame}
+
+\begin{frame}{Protokol Pelatihan \& Pengujian Statistik}
+\begin{itemize}
+    \item \textbf{Lingkungan:} Framework Ultralytics, PyTorch, GPU NVIDIA RTX 4090 tunggal.
+    \item \textbf{Keadilan Hyperparameter:} Semua model menggunakan optimizer, augmentasi (mosaic, HSV, flip), resolusi input (1280), dan early stopping (patience=25) yang sama.
+    \item \textbf{Kontrol Variabilitas (Multi-Seed):} Setiap model dilatih dan diuji sebanyak \textbf{3 kali} menggunakan seed yang berbeda (\textbf{Seed 42, 0, 1}).
+    \item \textbf{Uji Signifikansi:} Melakukan \textbf{paired t-test} (uji-t berpasangan) pada performa mAP@0.5 antara baseline vs varian dengan $\alpha = 0,05$ untuk memvalidasi perbedaan nyata.
+\end{itemize}
+\end{frame}
+
+% ============================================================
+% PART 3: RESULTS
+% ============================================================
+\section{Hasil Eksperimen}
+
+\begin{frame}{Performa Overall pada Split Test}
+\begin{columns}
+\begin{column}{0.52\textwidth}
+\centering
+\resizebox{0.95\linewidth}{!}{%
+\begin{tabular}{lccc}
+\toprule
+\textbf{Model} & \textbf{mAP@0.5} & \textbf{mAP@.5:.95} & \textbf{FPS} \\
+\midrule
+\textbf{YOLOv8s} & $\mathbf{0.9592 \pm 0.0014}$ & $0.6862 \pm 0.0046$ & $\mathbf{\sim 296}$ \\
+YOLO11s          & $0.9569 \pm 0.0046$          & $\mathbf{0.6898 \pm 0.0030}$ & $\sim 189$ \\
+YOLOv8s+CBAM     & $0.9479 \pm 0.0004$          & $0.6810 \pm 0.0045$ & $\sim 290$ \\
+\bottomrule
+\end{tabular}}
+
+\vspace{1em}
+\begin{itemize}
+    \item Metrik dilaporkan dalam bentuk \textbf{rata-rata $\pm$ standar deviasi} ($n = 3$).
+    \item Baseline YOLOv8s mencatat mAP@0.5 tertinggi sekaligus kecepatan tercepat ($\sim 296$ FPS).
+    \item Penambahan CBAM menurunkan akurasi mAP@0.5 secara konsisten.
+\end{itemize}
+\end{column}
+\begin{column}{0.44\textwidth}
+\centering
+\includegraphics[width=\linewidth,height=0.75\textheight,keepaspectratio]{../results/figures/fig1_attention_mAP50.png}
+\end{column}
+\end{columns}
+\end{frame}
+
+\begin{frame}{Hasil Uji Signifikansi Statistik (Paired t-test)}
+\centering
+\begin{tabular}{lcccc}
+\toprule
+\textbf{Perbandingan} & \textbf{Perbedaan Rata-rata ($\Delta$)} & \textbf{$t$(df)} & \textbf{Nilai $p$} & \textbf{Cohen's $d$} \\
+\midrule
+YOLOv8s vs YOLO11s & $-0,0023$ & $0,73\,(2)$ & $0,54$ & $0,61$ \\
+YOLOv8s vs YOLOv8s+CBAM & $\mathbf{-0,0113}$ & $10,9\,(2)$ & $\mathbf{0,008}$ & $9,1$ \\
+\bottomrule
+\end{tabular}
+
+\vspace{1.5em}
+\begin{itemize}
+    \item \textbf{YOLOv8s vs YOLO11s:} Perbedaan tidak signifikan ($p > 0,05$). Hipotesis bahwa YOLO11s lebih unggul \textbf{tidak terbukti}. Perubahan mAP berada dalam batas variasi acak inisialisasi.
+    \item \textbf{YOLOv8s vs YOLOv8s+CBAM:} Terjadi penurunan akurasi yang \textbf{sangat signifikan secara statistik} ($p = 0,008$) dengan efek size yang sangat besar (Cohen's $d = 9,1$).
+\end{itemize}
+\end{frame}
+
+\begin{frame}{Analisis Performa Per-Kelas (YOLOv8s Baseline)}
+\begin{columns}
+\begin{column}{0.55\textwidth}
+\begin{itemize}
+    \item \textbf{\texttt{motorcyclist}:} mAP@0.5 = \textbf{0.990}
+    \begin{itemize}
+        \item Kelas termudah karena ukuran objek besar dan karakteristik visualnya sangat menonjol di frame.
+    \end{itemize}
+    \item \textbf{\texttt{license\_plate}:} mAP@0.5 = \textbf{0.969}
+    \item \textbf{\texttt{helmet}:} mAP@0.5 = \textbf{0.923}
+    \begin{itemize}
+        \item Kelas paling menantang karena ukuran helm kecil, variasi warna tinggi, dan rawan terhalang (oklusi).
+    \end{itemize}
+\end{itemize}
+\vspace{0.5em}
+\textbf{Implikasi:} Fokus pengembangan model deteksi helm ke depan harus diarahkan untuk mengatasi kelemahan pada kelas \texttt{helmet}.
+\end{column}
+\begin{column}{0.45\textwidth}
+\centering
+\includegraphics[width=\linewidth,height=0.75\textheight,keepaspectratio]{../results/figures/fig2_per_class.png}
+\end{column}
+\end{columns}
+\end{frame}
+
+\begin{frame}{Trade-off Akurasi vs Kecepatan (FPS)}
+\begin{columns}
+\begin{column}{0.55\textwidth}
+\begin{itemize}
+    \item \textbf{YOLOv8s} mendominasi Pareto frontier dengan menjadi model terakurat sekaligus tercepat ($\sim 296$ FPS).
+    \item \textbf{YOLO11s} berjalan $\sim 36\%$ lebih lambat ($\sim 189$ FPS) karena kompleksitas komputasi modul atensi C2PSA, tanpa memberikan peningkatan akurasi yang signifikan.
+    \item \textbf{YOLOv8s+CBAM} mempertahankan kecepatan tinggi ($\sim 290$ FPS) karena modul CBAM yang ringan, namun mengalami penurunan akurasi mAP@0.5 yang signifikan.
+\end{itemize}
+\end{column}
+\begin{column}{0.45\textwidth}
+\centering
+\includegraphics[width=\linewidth,height=0.75\textheight,keepaspectratio]{../results/figures/fig3_accuracy_speed.png}
+\end{column}
+\end{columns}
+\end{frame}
+
+\begin{frame}{Hasil Visual (Analisis Kualitatif)}
+\begin{columns}
+\begin{column}{0.55\textwidth}
+\centering
+\includegraphics[width=\linewidth,height=0.75\textheight,keepaspectratio]{../results/figures/fig4_detection_example.png}
+\end{column}
+\begin{column}{0.45\textwidth}
+\textbf{Analisis Deteksi Visual:}
+\begin{itemize}
+    \item Model berhasil mendeteksi ketiga kelas (\texttt{motorcyclist}, \texttt{helmet}, \texttt{license\_plate}) secara simultan dengan koordinat kotak pembatas (\textit{bounding box}) yang presisi.
+    \item Analisis kualitatif pada sampel uji menunjukkan kesalahan lokalisasi mayoritas terjadi pada objek helm yang berukuran sangat kecil di kejauhan atau yang mengalami oklusi sebagian oleh pengendara lain.
+\end{itemize}
+\end{column}
+\end{columns}
+\end{frame}
+
+% ============================================================
+% PART 4: DISCUSSION & CONCLUSION
+% ============================================================
+\section{Pembahasan}
+
+\begin{frame}{Mengapa Mekanisme Atensi Gagal Meningkatkan Hasil?}
+\begin{enumerate}
+    \item \textbf{Efek Kejenuhan Dataset (Ceiling Effect):}
+    \begin{itemize}
+        \item Akurasi baseline YOLOv8s sudah sangat tinggi (mAP@0.5 $\sim$0.96) pada dataset Roboflow yang relatif bersih ini.
+        \item Dengan ruang sisa peningkatan yang sangat sempit, mekanisme atensi yang kompleks tidak memiliki cukup peluang untuk menunjukkan keunggulannya.
+    \end{itemize}
+    
+    \vspace{0.5em}
+    \item \textbf{Disrupsi Inisialisasi pada CBAM:}
+    \begin{itemize}
+        \item Modul CBAM diinisialisasi secara acak, sedangkan bagian jaringan lainnya menggunakan bobot pratalah COCO (\textit{pretrained COCO weights}).
+        \item Dengan data latih yang terbatas (1.563 gambar), sinyal gradien tidak cukup kuat untuk menyelaraskan bobot baru CBAM dengan jalur fitur pretrained, mengganggu aliran fitur matang.
+    \end{itemize}
+
+    \vspace{0.5em}
+    \item \textbf{Kompleksitas YOLO11s (C2PSA):}
+    \begin{itemize}
+        \item Penambahan C2PSA tidak meningkatkan akurasi secara signifikan namun menurunkan FPS secara drastis, menunjukkan ketidakefisienan untuk dataset skala kecil-menengah.
+    \end{itemize}
+\end{enumerate}
+\end{frame}
+
+\begin{frame}{Kesimpulan \& Saran}
+\begin{columns}
+\begin{column}{0.5\textwidth}
+\textbf{Kesimpulan Utama:}
+\begin{itemize}
+    \item Hipotesis bahwa YOLO11s mengungguli YOLOv8s \textbf{tidak terbukti} secara statistik ($p = 0.54$).
+    \item Penambahan modul CBAM justru \textbf{menurunkan akurasi secara signifikan} ($p = 0.008$) karena disrupsi inisialisasi pada dataset kecil.
+    \item \textbf{YOLOv8s murni} tetap menjadi model terbaik dari segi akurasi dan kecepatan untuk deteksi helm real-time.
+\end{itemize}
+\end{column}
+\begin{column}{0.5\textwidth}
+\textbf{Saran untuk Riset Selanjutnya:}
+\begin{itemize}
+    \item Evaluasi pada dataset jalan raya yang lebih menantang (kondisi hujan, malam hari, oklusi ekstrem).
+    \item Lakukan \textbf{uji ablasi CBAM} yang lebih mendalam: penempatan di dalam backbone dan alokasi \textit{learning rate} khusus untuk bagian atensi.
+    \item Tambahkan jumlah seed pengujian (misal $n = 5$ atau $10$) untuk memperkuat daya uji statistik pada perbedaan kecil.
+\end{itemize}
+\end{column}
+\end{columns}
 \end{frame}
 
 \begin{frame}{}
@@ -743,13 +327,12 @@ Detector & YOLOX (untuk multi-person) \\
 {\Huge\bfseries Terima Kasih}
 
 \vspace{1.5em}
-{\large Pertanyaan?}
+{\large Ada Pertanyaan?}
 
 \vspace{2em}
 {\small
-Paper: \textit{ProbPose: A Probabilistic Approach to 2D Human Pose Estimation}\\
-Purkrabek \& Matas, CVPR 2025\\[0.5em]
-\texttt{arxiv.org/abs/2412.02254}
+Studi Perbandingan Keefektifan Mekanisme Atensi pada YOLO\\
+Mata Kuliah Visual Komputer Lanjut
 }
 \end{frame}
 

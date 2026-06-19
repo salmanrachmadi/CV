@@ -1,0 +1,4 @@
+\beamer@sectionintoc {1}{Pendahuluan}{3}{0}{1}
+\beamer@sectionintoc {2}{Metodologi}{5}{0}{2}
+\beamer@sectionintoc {3}{Hasil Eksperimen}{8}{0}{3}
+\beamer@sectionintoc {4}{Pembahasan}{13}{0}{4}
