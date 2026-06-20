@@ -25,8 +25,8 @@
 \definecolor{warning}{RGB}{243,156,18}
 
 % Title info
-\title[Deteksi Helm]{\textbf{Perbandingan YOLOv8s, YOLO11s, dan YOLOv8s+CBAM\\untuk Deteksi Helm Pengendara Sepeda Motor}}
-\subtitle{Laporan Tugas Proyek --- Visual Komputer Lanjut}
+\title[Deteksi Helm]{\textbf{Dari Zero-shot ke Fine-tuning: Gap Domain dan Peran Atensi\\pada Deteksi Helm Pengendara Sepeda Motor}}
+\subtitle{Laporan Tugas Proyek: Visual Komputer Lanjut}
 \author{Ardityo Cahyo \and Salman Rachmadi \and Ahmad Taufiq}
 \institute{Fakultas Informatika \\ Universitas Telkom, Bandung}
 \date{}
@@ -46,11 +46,11 @@
 \begin{frame}{Outline Presentasi}
 \begin{enumerate}
     \item Latar Belakang \& Masalah
-    \item Pertanyaan Riset \& Hipotesis
-    \item Metodologi (Dataset, Model, \& Protokol Eksperimen)
-    \item Hasil Eksperimen (Akurasi, Kecepatan, \& Uji Statistik)
-    \item Analisis \& Pembahasan (Mengapa Atensi Gagal?)
-    \item Kesimpulan \& Saran
+    \item Pertanyaan Riset (RQ1 \& RQ2)
+    \item Metodologi (Dataset, Model, \& Dua Protokol Evaluasi)
+    \item Hasil 1: Gap Domain (Zero-shot COCO)
+    \item Hasil 2: Setelah Fine-tuning \& Uji Statistik
+    \item Pembahasan \& Kesimpulan
 \end{enumerate}
 \end{frame}
 
@@ -65,15 +65,15 @@
 \textbf{Pentingnya Deteksi Helm:}
 \begin{itemize}
     \item Helm merupakan pelindung utama pengendara motor dari cedera kepala fatal dalam kecelakaan lalu lintas.
-    \item Pemantauan kepatuhan secara manual oleh petugas tidak efisien dan tidak dapat diskalakan untuk volume lalu lintas nyata.
-    \item Diperlukan otomatisasi berbasis \textbf{Computer Vision} (deteksi objek) menggunakan kamera CCTV jalan raya.
+    \item Pemantauan kepatuhan secara manual tidak efisien dan tidak dapat diskalakan untuk volume lalu lintas nyata.
+    \item Diperlukan otomatisasi berbasis \textbf{Computer Vision} (deteksi objek) dari kamera CCTV jalan raya.
 \end{itemize}
 
 \vspace{0.5em}
-\textbf{Masalah di Literatur:}
+\textbf{Dua Asumsi yang Sering Tak Diuji:}
 \begin{itemize}
-    \item Banyak riset mengklaim menambahkan mekanisme atensi (misal: CBAM) meningkatkan akurasi deteksi helm.
-    \item Namun, laporan tersebut seringkali mengabaikan pengujian statistik yang ketat (uji signifikansi) dan evaluasi multi-seed untuk mengontrol faktor kebetulan inisialisasi.
+    \item Bahwa bobot pra-latih COCO bisa langsung dipakai pada domain helm.
+    \item Bahwa menambah mekanisme atensi (mis. CBAM) otomatis meningkatkan akurasi, padahal klaim ini sering tanpa uji signifikansi \& multi-seed.
 \end{itemize}
 \end{column}
 \begin{column}{0.4\textwidth}
@@ -87,18 +87,20 @@
 \end{columns}
 \end{frame}
 
-\begin{frame}{Pertanyaan Riset \& Hipotesis}
-\textbf{Pertanyaan Riset:}
-\begin{block}{}
-Apakah penambahan mekanisme atensi (seperti blok C2PSA pada YOLO11 atau modul CBAM pada YOLOv8) meningkatkan akurasi deteksi helm secara signifikan dalam kondisi pengujian multi-seed yang terkontrol?
+\begin{frame}{Pertanyaan Riset}
+\textbf{Kontribusi utama bersifat metodologis:} memisahkan secara eksplisit efek \emph{fine-tuning} (gap domain) dari efek \emph{atensi}, dengan protokol identik, multi-seed, dan uji statistik.
+
+\vspace{1em}
+\begin{block}{RQ1 --- Gap Domain}
+Seberapa besar gap domain antara bobot COCO apa adanya dan tugas deteksi helm?
 \end{block}
 
-\vspace{1.5em}
-\textbf{Hipotesis Kerja:}
-\begin{itemize}
-    \item \textbf{YOLO11s} (memiliki blok \textit{positional self-attention} C2PSA) sebagai arsitektur yang lebih baru akan menghasilkan akurasi (mAP) yang lebih tinggi dibandingkan baseline \textbf{YOLOv8s} (tanpa atensi).
-    \item Penambahan modul \textbf{CBAM} (atensi saluran dan spasial) pada YOLOv8s akan meningkatkan akurasi lokalisasi kelas kecil (helm dan plat nomor).
-\end{itemize}
+\begin{block}{RQ2 --- Peran Atensi}
+Setelah fine-tuning dengan protokol identik dan multi-seed, apakah mekanisme atensi (C2PSA pada YOLO11s, CBAM pada YOLOv8s) melampaui CNN murni YOLOv8s secara \textbf{statistik bermakna}?
+\end{block}
+
+\vspace{0.5em}
+\footnotesize Catatan: tujuannya bukan menyimpulkan ``atensi buruk'', melainkan menguji asumsi secara terkendali.
 \end{frame}
 
 % ============================================================
@@ -111,22 +113,21 @@ Apakah penambahan mekanisme atensi (seperti blok C2PSA pada YOLO11 atau modul CB
 \begin{column}{0.55\textwidth}
 \textbf{Karakteristik Dataset:}
 \begin{itemize}
-    \item Menggunakan dataset publik Roboflow Universe: \textbf{NCKH 2023 Helmet Detection Project (v19)}.
-    \item Total \textbf{1.803 gambar} dengan pembagian split tetap:
+    \item Dataset publik Roboflow Universe: \textbf{NCKH 2023 Helmet Detection Project (v19)}, lisensi MIT.
+    \item Total \textbf{1.803 gambar}, split tetap:
     \begin{itemize}
-        \item \textbf{Train:} 1.563 gambar
-        \item \textbf{Val:} 140 gambar
-        \item \textbf{Test:} 100 gambar (evaluasi akhir)
+        \item \textbf{Train:} 1.563 \quad \textbf{Val:} 140 \quad \textbf{Test:} 100
     \end{itemize}
-    \item Resolusi input ditingkatkan ke \textbf{1280 piksel} untuk mempertahankan detail spasial objek kecil.
+    \item Resolusi input \textbf{1280 piksel} untuk mempertahankan detail objek kecil.
+    \item Kondisi relatif mudah (siang hari, pencahayaan memadai, oklusi ringan).
 \end{itemize}
 \end{column}
 \begin{column}{0.45\textwidth}
 \textbf{3 Kelas Target Deteksi:}
 \begin{enumerate}
-    \item \textbf{\texttt{motorcyclist}:} Pengendara sepeda motor (sebagai konteks utama).
-    \item \textbf{\texttt{helmet}:} Helm yang digunakan (objek kepatuhan).
-    \item \textbf{\texttt{license\_plate}:} Plat nomor kendaraan (sebagai jangkar identifikasi pelanggar).
+    \item \textbf{\texttt{motorcyclist}:} pengendara (konteks utama).
+    \item \textbf{\texttt{helmet}:} helm (objek kepatuhan).
+    \item \textbf{\texttt{license\_plate}:} plat nomor (jangkar identifikasi).
 \end{enumerate}
 \end{column}
 \end{columns}
@@ -139,8 +140,8 @@ Apakah penambahan mekanisme atensi (seperti blok C2PSA pada YOLO11 atau modul CB
 \textbf{Model} & \textbf{Jenis Atensi} & \textbf{Jumlah Parameter} & \textbf{Peran Eksperimen} \\
 \midrule
 \textbf{YOLOv8s} & None & $\sim$11,17 Juta & Baseline (Pure CNN) \\
-\textbf{YOLO11s} & Partial (C2PSA) & $\sim$9,40 Juta & State-of-the-Art (Self-Attention) \\
-\textbf{YOLOv8s+CBAM} & Channel + Spatial & $\sim$11,51 Juta & Intervensi Atensi Tambahan \\
+\textbf{YOLO11s} & Partial (C2PSA) & $\sim$9,40 Juta & Atensi parsial (self-attention) \\
+\textbf{YOLOv8s+CBAM} & Channel + Spatial & $\sim$11,51 Juta & Intervensi atensi eksplisit \\
 \bottomrule
 \end{tabular}
 
@@ -148,126 +149,140 @@ Apakah penambahan mekanisme atensi (seperti blok C2PSA pada YOLO11 atau modul CB
 \begin{columns}
 \begin{column}{0.9\textwidth}
 \begin{itemize}
-    \item \textbf{YOLOv8s+CBAM} dibuat dengan menyisipkan 3 modul CBAM tepat sebelum kepala deteksi (skala P3, P4, P5) untuk meminimalkan perbedaan arsitektural di luar mekanisme atensi itu sendiri.
-    \item Parameter bertambah $\sim 3\%$ dari baseline YOLOv8s.
+    \item \textbf{YOLOv8s+CBAM}: 3 modul CBAM disisipkan tepat sebelum kepala deteksi (P3, P4, P5); parameter naik $\sim 3\%$.
+    \item CBAM diuji pada \textbf{satu konfigurasi saja} (penempatan P3/P4/P5, \textit{learning rate} tunggal, tanpa pemanasan terpisah) --- keterbatasan yang diakui.
 \end{itemize}
 \end{column}
 \end{columns}
 \end{frame}
 
-\begin{frame}{Protokol Pelatihan \& Pengujian Statistik}
-\begin{itemize}
-    \item \textbf{Lingkungan:} Framework Ultralytics, PyTorch, GPU NVIDIA RTX 4090 tunggal.
-    \item \textbf{Keadilan Hyperparameter:} Semua model menggunakan optimizer, augmentasi (mosaic, HSV, flip), resolusi input (1280), dan early stopping (patience=25) yang sama.
-    \item \textbf{Kontrol Variabilitas (Multi-Seed):} Setiap model dilatih dan diuji sebanyak \textbf{3 kali} menggunakan seed yang berbeda (\textbf{Seed 42, 0, 1}).
-    \item \textbf{Uji Signifikansi:} Melakukan \textbf{paired t-test} (uji-t berpasangan) pada performa mAP@0.5 antara baseline vs varian dengan $\alpha = 0,05$ untuk memvalidasi perbedaan nyata.
-\end{itemize}
+\begin{frame}{Dua Protokol Evaluasi}
+\begin{block}{Protokol 1 --- Baseline Vanilla (Zero-shot COCO)}
+Bobot COCO YOLOv8s/YOLO11s dievaluasi \textbf{tanpa pelatihan}. \texttt{motorcycle} COCO dipetakan ke \texttt{motorcyclist}; \texttt{helmet}/\texttt{license\_plate} tak ada di COCO sehingga AP-nya \textbf{nol \emph{by design}}. Dihitung dengan \texttt{pycocotools}. Tujuannya memverifikasi gap domain, bukan membandingkan arsitektur.
+\end{block}
+
+\begin{block}{Protokol 2 --- Fine-tuning (Transfer Learning)}
+Ketiga model dilatih dari bobot COCO dengan protokol \textbf{identik}: 1280 px, 100 epoch, optimizer/augmentasi sama (mosaic, HSV, flip, scale), early stopping (patience 25). \textbf{Multi-seed} (42, 0, 1) dijalankan \textbf{berurutan \& mandiri} dengan pembersihan memori GPU antar-run.
+\end{block}
+
+\vspace{0.3em}
+\footnotesize \textbf{Uji statistik:} paired t-test antar-seed pada \emph{kedua} metrik (mAP@0.5 \& mAP@[.5:.95]) + Cohen's $d$, $\alpha = 0,05$. Dengan $n=3$, daya uji terbatas.
 \end{frame}
 
 % ============================================================
-% PART 3: RESULTS
+% PART 3a: RESULTS — DOMAIN GAP
 % ============================================================
 \section{Hasil Eksperimen}
 
-\begin{frame}{Performa Overall pada Split Test}
+\begin{frame}{Hasil 1 --- Gap Domain (Zero-shot COCO) [RQ1]}
+\begin{columns}
+\begin{column}{0.5\textwidth}
+\centering
+\resizebox{0.98\linewidth}{!}{%
+\begin{tabular}{lcc}
+\toprule
+\textbf{Model (vanilla)} & \textbf{mAP@0.5} & \textbf{motorcyclist} \\
+\midrule
+YOLOv8s & $0,0986$ & $0,296$ \\
+YOLO11s & $0,1143$ & $0,343$ \\
+\bottomrule
+\end{tabular}}
+
+\vspace{0.8em}
+\begin{itemize}\small
+    \item \texttt{helmet} \& \texttt{license\_plate} $= 0$ \emph{by design} (tak ada padanan COCO).
+    \item Bobot COCO apa adanya \textbf{tidak bisa dipakai} untuk deteksi helm.
+    \item Perbedaan antar-arsitektur di sini \textbf{tidak bermakna} (keduanya gagal di 2 dari 3 kelas).
+\end{itemize}
+\end{column}
+\begin{column}{0.5\textwidth}
+\centering
+\includegraphics[width=\linewidth,height=0.72\textheight,keepaspectratio]{gambar/vanilla_per_class.png}
+\end{column}
+\end{columns}
+\vspace{0.2em}
+\footnotesize \textbf{Jawaban RQ1:} gap domain \textbf{besar} --- fine-tuning bersifat wajib sebelum deployment.
+\end{frame}
+
+\begin{frame}{Lonjakan Akurasi: Zero-shot $\rightarrow$ Fine-tuning}
+\centering
+\includegraphics[width=0.8\linewidth,height=0.72\textheight,keepaspectratio]{gambar/compare_vanilla_vs_finetuned.png}
+
+\footnotesize Dari $\sim$0,10 (zero-shot) ke $\sim$0,96 (fine-tuned). Efek fine-tuning jauh lebih besar daripada perbedaan antar-arsitektur.
+\end{frame}
+
+% ============================================================
+% PART 3b: RESULTS — FINE-TUNED
+% ============================================================
+\begin{frame}{Hasil 2 --- Performa Setelah Fine-tuning [RQ2]}
 \begin{columns}
 \begin{column}{0.52\textwidth}
 \centering
-\resizebox{0.95\linewidth}{!}{%
+\resizebox{0.98\linewidth}{!}{%
 \begin{tabular}{lccc}
 \toprule
 \textbf{Model} & \textbf{mAP@0.5} & \textbf{mAP@.5:.95} & \textbf{FPS} \\
 \midrule
-\textbf{YOLOv8s} & $\mathbf{0.9592 \pm 0.0014}$ & $0.6862 \pm 0.0046$ & $\mathbf{\sim 296}$ \\
-YOLO11s          & $0.9569 \pm 0.0046$          & $\mathbf{0.6898 \pm 0.0030}$ & $\sim 189$ \\
-YOLOv8s+CBAM     & $0.9479 \pm 0.0004$          & $0.6810 \pm 0.0045$ & $\sim 290$ \\
+\textbf{YOLOv8s} & $\mathbf{0,9596 \pm 0,0008}$ & $0,6885 \pm 0,0006$ & $\mathbf{\sim 296}$ \\
+YOLO11s          & $0,9574 \pm 0,0019$          & $\mathbf{0,6902 \pm 0,0022}$ & $\sim 189$ \\
+YOLOv8s+CBAM     & $0,9481 \pm 0,0006$          & $0,6832 \pm 0,0034$ & $\sim 290$ \\
 \bottomrule
 \end{tabular}}
 
 \vspace{1em}
-\begin{itemize}
-    \item Metrik dilaporkan dalam bentuk \textbf{rata-rata $\pm$ standar deviasi} ($n = 3$).
-    \item Baseline YOLOv8s mencatat mAP@0.5 tertinggi sekaligus kecepatan tercepat ($\sim 296$ FPS).
-    \item Penambahan CBAM menurunkan akurasi mAP@0.5 secara konsisten.
+\begin{itemize}\small
+    \item Rata-rata $\pm$ simpangan baku ($n = 3$).
+    \item Pada mAP@0.5, \textbf{YOLOv8s} tertinggi sekaligus tercepat.
+    \item \textbf{Pembalikan:} pada mAP@[.5:.95] justru \textbf{YOLO11s} sedikit unggul (tidak signifikan).
+    \item CBAM paling rendah pada kedua metrik.
 \end{itemize}
 \end{column}
 \begin{column}{0.44\textwidth}
 \centering
-\includegraphics[width=\linewidth,height=0.75\textheight,keepaspectratio]{../results/figures/fig1_attention_mAP50.png}
+\includegraphics[width=\linewidth,height=0.72\textheight,keepaspectratio]{gambar/compare_finetuned.png}
 \end{column}
 \end{columns}
 \end{frame}
 
-\begin{frame}{Hasil Uji Signifikansi Statistik (Paired t-test)}
+\begin{frame}{Uji Signifikansi (Paired t-test, $n=3$)}
 \centering
+\textbf{mAP@0.5}\\[0.3em]
 \begin{tabular}{lcccc}
 \toprule
-\textbf{Perbandingan} & \textbf{Perbedaan Rata-rata ($\Delta$)} & \textbf{$t$(df)} & \textbf{Nilai $p$} & \textbf{Cohen's $d$} \\
+\textbf{Perbandingan} & \textbf{$\Delta$} & \textbf{$t$(2)} & \textbf{$p$} & \textbf{Cohen's $d$} \\
 \midrule
-YOLOv8s vs YOLO11s & $-0,0023$ & $0,73\,(2)$ & $0,54$ & $0,61$ \\
-YOLOv8s vs YOLOv8s+CBAM & $\mathbf{-0,0113}$ & $10,9\,(2)$ & $\mathbf{0,008}$ & $9,1$ \\
+YOLOv8s vs CBAM    & $+0,0116$ & $16,1$ & $\mathbf{0,004}$ & $9,3$ \\
+YOLOv8s vs YOLO11s & $+0,0022$ & $2,71$ & $0,11$ (n.s.) & $1,56$ \\
+YOLO11s vs CBAM    & $+0,0093$ & $8,92$ & $0,012$ & $5,15$ \\
 \bottomrule
 \end{tabular}
 
-\vspace{1.5em}
-\begin{itemize}
-    \item \textbf{YOLOv8s vs YOLO11s:} Perbedaan tidak signifikan ($p > 0,05$). Hipotesis bahwa YOLO11s lebih unggul \textbf{tidak terbukti}. Perubahan mAP berada dalam batas variasi acak inisialisasi.
-    \item \textbf{YOLOv8s vs YOLOv8s+CBAM:} Terjadi penurunan akurasi yang \textbf{sangat signifikan secara statistik} ($p = 0,008$) dengan efek size yang sangat besar (Cohen's $d = 9,1$).
+\vspace{0.8em}
+\textbf{mAP@[.5:.95]} --- \emph{tidak ada} perbandingan yang signifikan (mis. YOLO11s vs YOLOv8s: $p = 0,37$).
+
+\vspace{1em}
+\begin{itemize}\small
+    \item \textbf{YOLO11s vs baseline:} tidak signifikan ($p = 0,11$) --- \textit{ketiadaan bukti perbedaan}, bukan bukti kesetaraan.
+    \item \textbf{CBAM:} penurunan mAP@0.5 \textbf{signifikan} ($p = 0,004$, $d \approx 9,3$), namun terbatas pada \textbf{satu konfigurasi}.
 \end{itemize}
 \end{frame}
 
-\begin{frame}{Analisis Performa Per-Kelas (YOLOv8s Baseline)}
+\begin{frame}{Trade-off Kecepatan \& Analisis Kualitatif}
 \begin{columns}
-\begin{column}{0.55\textwidth}
-\begin{itemize}
-    \item \textbf{\texttt{motorcyclist}:} mAP@0.5 = \textbf{0.990}
-    \begin{itemize}
-        \item Kelas termudah karena ukuran objek besar dan karakteristik visualnya sangat menonjol di frame.
-    \end{itemize}
-    \item \textbf{\texttt{license\_plate}:} mAP@0.5 = \textbf{0.969}
-    \item \textbf{\texttt{helmet}:} mAP@0.5 = \textbf{0.923}
-    \begin{itemize}
-        \item Kelas paling menantang karena ukuran helm kecil, variasi warna tinggi, dan rawan terhalang (oklusi).
-    \end{itemize}
+\begin{column}{0.5\textwidth}
+\textbf{Kecepatan (FPS, indikatif):}
+\begin{itemize}\small
+    \item \textbf{YOLOv8s} $\sim$296 FPS --- terakurat (mAP@0.5) \emph{dan} tercepat.
+    \item \textbf{YOLO11s} $\sim$189 FPS --- $\sim$36\% lebih lambat tanpa keunggulan akurasi signifikan.
+    \item \textbf{CBAM} $\sim$290 FPS --- ringan, tapi akurasi turun.
 \end{itemize}
 \vspace{0.5em}
-\textbf{Implikasi:} Fokus pengembangan model deteksi helm ke depan harus diarahkan untuk mengatasi kelemahan pada kelas \texttt{helmet}.
+\textbf{Per-kelas (YOLOv8s fine-tuned):} \texttt{motorcyclist} 0,990 $>$ \texttt{license\_plate} 0,969 $>$ \texttt{helmet} 0,923 (kelas tersulit).
 \end{column}
-\begin{column}{0.45\textwidth}
+\begin{column}{0.5\textwidth}
 \centering
-\includegraphics[width=\linewidth,height=0.75\textheight,keepaspectratio]{../results/figures/fig2_per_class.png}
-\end{column}
-\end{columns}
-\end{frame}
-
-\begin{frame}{Trade-off Akurasi vs Kecepatan (FPS)}
-\begin{columns}
-\begin{column}{0.55\textwidth}
-\begin{itemize}
-    \item \textbf{YOLOv8s} mendominasi Pareto frontier dengan menjadi model terakurat sekaligus tercepat ($\sim 296$ FPS).
-    \item \textbf{YOLO11s} berjalan $\sim 36\%$ lebih lambat ($\sim 189$ FPS) karena kompleksitas komputasi modul atensi C2PSA, tanpa memberikan peningkatan akurasi yang signifikan.
-    \item \textbf{YOLOv8s+CBAM} mempertahankan kecepatan tinggi ($\sim 290$ FPS) karena modul CBAM yang ringan, namun mengalami penurunan akurasi mAP@0.5 yang signifikan.
-\end{itemize}
-\end{column}
-\begin{column}{0.45\textwidth}
-\centering
-\includegraphics[width=\linewidth,height=0.75\textheight,keepaspectratio]{../results/figures/fig3_accuracy_speed.png}
-\end{column}
-\end{columns}
-\end{frame}
-
-\begin{frame}{Hasil Visual (Analisis Kualitatif)}
-\begin{columns}
-\begin{column}{0.55\textwidth}
-\centering
-\includegraphics[width=\linewidth,height=0.75\textheight,keepaspectratio]{../results/figures/fig4_detection_example.png}
-\end{column}
-\begin{column}{0.45\textwidth}
-\textbf{Analisis Deteksi Visual:}
-\begin{itemize}
-    \item Model berhasil mendeteksi ketiga kelas (\texttt{motorcyclist}, \texttt{helmet}, \texttt{license\_plate}) secara simultan dengan koordinat kotak pembatas (\textit{bounding box}) yang presisi.
-    \item Analisis kualitatif pada sampel uji menunjukkan kesalahan lokalisasi mayoritas terjadi pada objek helm yang berukuran sangat kecil di kejauhan atau yang mengalami oklusi sebagian oleh pengendara lain.
-\end{itemize}
+\includegraphics[width=\linewidth,height=0.7\textheight,keepaspectratio]{gambar/infer_yolov8s.png}\\
+\footnotesize Contoh deteksi YOLOv8s: tiga kelas terdeteksi simultan.
 \end{column}
 \end{columns}
 \end{frame}
@@ -277,26 +292,25 @@ YOLOv8s vs YOLOv8s+CBAM & $\mathbf{-0,0113}$ & $10,9\,(2)$ & $\mathbf{0,008}$ & 
 % ============================================================
 \section{Pembahasan}
 
-\begin{frame}{Mengapa Mekanisme Atensi Gagal Meningkatkan Hasil?}
+\begin{frame}{Mengapa Atensi Tidak Terbayar di Sini?}
 \begin{enumerate}
-    \item \textbf{Efek Kejenuhan Dataset (Ceiling Effect):}
+    \item \textbf{Efek langit-langit (ceiling effect):}
     \begin{itemize}
-        \item Akurasi baseline YOLOv8s sudah sangat tinggi (mAP@0.5 $\sim$0.96) pada dataset Roboflow yang relatif bersih ini.
-        \item Dengan ruang sisa peningkatan yang sangat sempit, mekanisme atensi yang kompleks tidak memiliki cukup peluang untuk menunjukkan keunggulannya.
+        \item Baseline sudah $\sim$0,96 pada dataset relatif mudah --- ruang perbaikan sangat tipis bagi atensi.
+        \item Manfaat atensi umumnya muncul pada data besar \& beragam.
     \end{itemize}
-    
-    \vspace{0.5em}
-    \item \textbf{Disrupsi Inisialisasi pada CBAM:}
+    \vspace{0.4em}
+    \item \textbf{Disrupsi inisialisasi CBAM:}
     \begin{itemize}
-        \item Modul CBAM diinisialisasi secara acak, sedangkan bagian jaringan lainnya menggunakan bobot pratalah COCO (\textit{pretrained COCO weights}).
-        \item Dengan data latih yang terbatas (1.563 gambar), sinyal gradien tidak cukup kuat untuk menyelaraskan bobot baru CBAM dengan jalur fitur pretrained, mengganggu aliran fitur matang.
+        \item Modul CBAM diinisialisasi acak, sisanya mewarisi bobot COCO; dengan data terbatas \& \textit{learning rate} tunggal, fitur matang terganggu.
     \end{itemize}
-
-    \vspace{0.5em}
-    \item \textbf{Kompleksitas YOLO11s (C2PSA):}
+    \vspace{0.4em}
+    \item \textbf{Hasil CBAM bukan vonis umum:}
     \begin{itemize}
-        \item Penambahan C2PSA tidak meningkatkan akurasi secara signifikan namun menurunkan FPS secara drastis, menunjukkan ketidakefisienan untuk dataset skala kecil-menengah.
+        \item Terbatas pada satu konfigurasi (penempatan/LR/warmup). Konfigurasi lain bisa berbeda --- perlu ablasi sistematis.
     \end{itemize}
+    \vspace{0.4em}
+    \item \textbf{Atensi parsial (C2PSA) lebih ``netral''} daripada modul tempelan pasca-hoc (CBAM), namun tetap tanpa keunggulan meyakinkan.
 \end{enumerate}
 \end{frame}
 
@@ -305,17 +319,18 @@ YOLOv8s vs YOLOv8s+CBAM & $\mathbf{-0,0113}$ & $10,9\,(2)$ & $\mathbf{0,008}$ & 
 \begin{column}{0.5\textwidth}
 \textbf{Kesimpulan Utama:}
 \begin{itemize}
-    \item Hipotesis bahwa YOLO11s mengungguli YOLOv8s \textbf{tidak terbukti} secara statistik ($p = 0.54$).
-    \item Penambahan modul CBAM justru \textbf{menurunkan akurasi secara signifikan} ($p = 0.008$) karena disrupsi inisialisasi pada dataset kecil.
-    \item \textbf{YOLOv8s murni} tetap menjadi model terbaik dari segi akurasi dan kecepatan untuk deteksi helm real-time.
+    \item \textbf{Gap domain besar} ($\sim$0,10 zero-shot $\rightarrow$ $\sim$0,96 fine-tuned): \textbf{fine-tuning wajib}.
+    \item \textbf{Tidak ada atensi yang konsisten melampaui CNN murni}: YOLOv8s unggul di mAP@0.5; YOLO11s sedikit unggul di mAP@[.5:.95] (tidak signifikan).
+    \item CBAM menurunkan mAP@0.5 secara signifikan, tetapi pada \textbf{satu konfigurasi}.
 \end{itemize}
 \end{column}
 \begin{column}{0.5\textwidth}
-\textbf{Saran untuk Riset Selanjutnya:}
+\textbf{Saran Riset Lanjut:}
 \begin{itemize}
-    \item Evaluasi pada dataset jalan raya yang lebih menantang (kondisi hujan, malam hari, oklusi ekstrem).
-    \item Lakukan \textbf{uji ablasi CBAM} yang lebih mendalam: penempatan di dalam backbone dan alokasi \textit{learning rate} khusus untuk bagian atensi.
-    \item Tambahkan jumlah seed pengujian (misal $n = 5$ atau $10$) untuk memperkuat daya uji statistik pada perbedaan kecil.
+    \item Dataset lebih menantang (malam, hujan, oklusi) yang mungkin memberi ruang bagi atensi.
+    \item \textbf{Ablasi CBAM} sistematis: penempatan di backbone, \textit{from scratch}, LR terpisah.
+    \item Tambah seed ($n \ge 5$) + analisis daya \emph{a priori} untuk memperkuat klaim.
+    \item Catatan etika/privasi pada integrasi deteksi helm + plat nomor.
 \end{itemize}
 \end{column}
 \end{columns}
@@ -331,7 +346,7 @@ YOLOv8s vs YOLOv8s+CBAM & $\mathbf{-0,0113}$ & $10,9\,(2)$ & $\mathbf{0,008}$ & 
 
 \vspace{2em}
 {\small
-Studi Perbandingan Keefektifan Mekanisme Atensi pada YOLO\\
+Dari Zero-shot ke Fine-tuning: Gap Domain \& Peran Atensi pada Deteksi Helm\\
 Mata Kuliah Visual Komputer Lanjut
 }
 \end{frame}
