@@ -67,9 +67,14 @@
 }
 
 % Title Info
-\title[Deteksi Helm]{\textbf{Dari Zero-shot ke Fine-tuning: Gap Domain dan Peran Atensi\\pada Deteksi Helm Pengendara Sepeda Motor}}
+\title[Deteksi Helm]{\textbf{From Zero-Shot to Fine-Tuning: Mengukur Domain Gap dan Peran Attention\\dalam Deteksi Helm Pengendara Motor}}
 \subtitle{Laporan Tugas Proyek: Visual Komputer Lanjut}
-\author{Ardityo Cahyo \and Salman Rachmadi \and Ahmad Taufiq Nur Rohman}
+\author{
+  \begin{tabular}{ccc}
+    Ardityo Cahyo & Salman Rachmadi & Ahmad Taufiq Nur Rohman \\
+    \footnotesize (203012510028) & \footnotesize (203012420009) & \footnotesize (203012420009)
+  \end{tabular}
+}
 \institute{Fakultas Informatika \\ Universitas Telkom, Bandung}
 \date{}
 
@@ -105,7 +110,7 @@
         \end{column}
         \begin{column}{0.3\textwidth}
             \textbf{\color{secondary}05. Diskusi \& Rekomendasi}\\
-            \small Mengapa atensi gagal \& simpulan akhir.
+            \small Mengapa attention gagal \& simpulan akhir.
         \end{column}
     \end{columns}
 \end{frame}
@@ -118,7 +123,7 @@
 \begin{frame}{Realita Jalan Raya \& Solusi AI}
 \begin{columns}
 \begin{column}{0.55\textwidth}
-    \large\textbf{Masalah: Risiko \& Pengawasan}
+    \large\textbf{Tantangan Pengawasan di Jalan Raya}
     \normalsize
     \vspace{0.5em}
     \begin{itemize}
@@ -168,11 +173,11 @@
         
         \begin{column}{0.48\textwidth}
             \centering
-            \colorbox{primary!10}{\makebox[0.9\textwidth]{\strut\textbf{\color{primary}Mitos 2: Keajaiban Atensi}}}
+            \colorbox{primary!10}{\makebox[0.95\textwidth]{\strut\textbf{\color{primary}Mitos 2: Asumsi Efek Instan Attention}}}
             \vspace{0.8em}
             
             \small
-            "Menambahkan modul atensi (CBAM / C2PSA) secara otomatis meningkatkan akurasi detektor."
+            "Menambahkan modul attention (CBAM / C2PSA) secara otomatis meningkatkan akurasi detektor."
         \end{column}
     \end{columns}
     
@@ -186,16 +191,16 @@
 % ============================================================
 \section{Sanity Check}
 
-\begin{frame}{Uji Mitos 1: Model COCO Tanpa Fine-Tuning}
+\begin{frame}{Verifikasi Gap Domain: Model COCO Tanpa Fine-Tuning}
 \begin{columns}
 \begin{column}{0.5\textwidth}
-    \large\textbf{Hasil Zero-Shot: Gagal Total!}
+    \large\textbf{Hasil Zero-Shot: Terbatas Secara Desain}
     \normalsize
     \vspace{0.5em}
     \begin{itemize}
-        \item \textbf{Akurasi Buruk}: Rata-rata mAP hanya $\sim 10\%$.
-        \item \textbf{Buta Kelas}: Deteksi kelas \texttt{helmet} \& \texttt{license\_plate} bernilai $0,0\%$.
-        \item \textbf{Penyebab}: COCO hanya melatih kelas umum (\textit{motorcycle}), tidak mengenali detail helm/plat nomor.
+        \item \textbf{Akurasi Rendah}: mAP hanya $\sim 10\%$ karena keterbatasan kelas pada model pretrained.
+        \item \textbf{Tidak Mengenali Helm \& Plat}: Bernilai $0,0\%$ secara desain karena tidak ada di 80 kelas COCO.
+        \item \textbf{Hanya Kelas Motorcyclist}: Dideteksi melalui pemetaan kelas \textit{motorcycle} pada COCO.
     \end{itemize}
     
     \vspace{0.8em}
@@ -286,27 +291,29 @@
 \begin{frame}{Tiga Desain Model yang Diuji}
     \centering
     \small
+    \resizebox{\linewidth}{!}{%
     \begin{tabular}{llcl}
     \toprule
-    \textbf{Model} & \textbf{Jenis Atensi} & \textbf{Parameter} & \textbf{Keterangan Arsitektur} \\
+    \textbf{Model} & \textbf{Jenis Attention} & \textbf{Parameter} & \textbf{Keterangan Arsitektur} \\
     \midrule
     \textbf{YOLOv8s} & None & $\sim$11,17 M & Baseline Klasik (Pure CNN) \\
-    \textbf{YOLO11s} & Parsial (C2PSA) & $\sim$9,40 M & Atensi Bawaan (Generasi Baru) \\
-    \textbf{YOLOv8s+CBAM} & Eksternal & $\sim$11,51 M & Atensi Tambahan (Kanal \& Spasial) \\
+    \textbf{YOLO11s} & Parsial (C2PSA) & $\sim$9,40 M & Attention Bawaan (Generasi Baru) \\
+    \textbf{YOLOv8s+CBAM} & Eksternal (Channel \& Spatial) & $\sim$11,51 M & Fokus pada fitur "what" \& "where" \\
     \bottomrule
-    \end{tabular}
+    \end{tabular}%
+    }
     
     \vspace{2.5em}
     \normalsize
     \begin{columns}[t]
         \begin{column}{0.48\textwidth}
-            \centering
-            \textbf{Kapasitas Berimbang}\\
-            \small Jumlah parameter disetel setara agar perbandingan murni menilai efektivitas atensi.
+            \centering\textbf{Perbandingan Adil}\par
+            \vspace{0.3em}
+            \small Jumlah parameter disetel setara ($\approx$ 9--11 Juta) agar perbandingan adil menilai efektivitas attention.
         \end{column}
         \begin{column}{0.48\textwidth}
-            \centering
-            \textbf{Posisi CBAM}\\
+            \centering\textbf{Posisi CBAM}\par
+            \vspace{0.3em}
             \small Modul CBAM disisipkan pada bagian neck (P3/P4/P5) sebelum detektor objek.
         \end{column}
     \end{columns}
@@ -367,8 +374,8 @@
     \normalsize
     \begin{itemize}
         \item \textbf{Akurasi Kasaran (mAP@0.5)}: YOLOv8s murni memimpin dan paling cepat.
-        \item \textbf{Presisi Lokalisasi (mAP@[.5:.95])}: YOLO11s (Atensi) unggul tipis ($+0,0017$), namun lambat.
-        \item \textbf{CBAM (Atensi tambahan)}: Justru mengalami penurunan performa.
+        \item \textbf{Presisi Lokalisasi (mAP@[.5:.95])}: YOLO11s (Attention) unggul tipis ($+0,0017$), namun lambat.
+        \item \textbf{CBAM (Attention tambahan)}: Justru mengalami penurunan performa.
     \end{itemize}
 \end{column}
 
@@ -383,7 +390,7 @@
     \begin{columns}[t]
         \begin{column}{0.48\textwidth}
             \centering
-            \colorbox{accent!10}{\makebox[0.95\textwidth]{\strut\textbf{\color{accent}Atensi Tambahan (CBAM) Gagal}}}
+            \colorbox{accent!10}{\makebox[0.95\textwidth]{\strut\textbf{\color{accent}Attention Tambahan (CBAM) Gagal}}}
             \vspace{0.8em}
             
             \small
@@ -400,15 +407,15 @@
             
             \small
             \begin{itemize}
-                \item \textbf{Performa Setara}: Tidak ada perbedaan signifikan secara statistik ($p = 0,11$ untuk mAP@0.5, $p = 0,37$ untuk mAP@[.5:.95]).
-                \item Keunggulan YOLO11s tidak nyata secara statistik.
+                \item \textbf{Tidak Cukup Bukti Perbedaan}: Perbedaan tidak signifikan secara statistik ($p = 0,11$ untuk mAP@0.5, $p = 0,37$ untuk mAP@[.5:.95]).
+                \item \textbf{Daya Statistik Rendah ($n=3$)}: Klaim kesetaraan definitif belum dapat diambil (*absence of evidence*).
             \end{itemize}
         \end{column}
     \end{columns}
     
     \vspace{2.2em}
     \centering
-    \large\textbf{\color{secondary}Jawaban RQ2: Atensi TIDAK memberikan keuntungan nyata.}
+    \large\textbf{\color{secondary}Jawaban RQ2: Attention TIDAK memberikan keuntungan nyata.}
 \end{frame}
 
 \begin{frame}{Kecepatan Pengolahan \& Deteksi Kualitatif}
@@ -419,7 +426,7 @@
     \vspace{0.5em}
     \begin{itemize}
         \item \textbf{YOLOv8s}: $\mathbf{\sim 296}$ FPS (Sangat cepat \& efisien).
-        \item \textbf{YOLO11s}: $\sim 189$ FPS (\textbf{36\% lebih lambat} akibat komputasi atensi C2PSA).
+        \item \textbf{YOLO11s}: $\sim 189$ FPS (\textbf{36\% lebih lambat} akibat komputasi attention C2PSA).
     \end{itemize}
     
     \vspace{1.2em}
@@ -445,7 +452,7 @@
 % ============================================================
 \section{Pembahasan}
 
-\begin{frame}{Mengapa Mekanisme Atensi Kurang Efektif?}
+\begin{frame}{Diskusi Temuan: Mengapa Attention Kurang Efektif?}
     \begin{columns}[t]
         \begin{column}{0.48\textwidth}
             \centering
@@ -453,7 +460,7 @@
             \vspace{0.8em}
             
             \small
-            Akurasi model baseline CNN murni (YOLOv8s) sudah terlampau tinggi (\textbf{95,9\%}). Ruang peningkatan untuk modul atensi sangat sempit pada dataset ini.
+            Akurasi model baseline CNN murni (YOLOv8s) sudah terlampau tinggi (\textbf{95,9\%}). Ruang peningkatan untuk modul attention sangat sempit pada dataset ini.
         \end{column}
         
         \begin{column}{0.48\textwidth}
@@ -465,6 +472,10 @@
             Inisialisasi acak modul CBAM pada model pretrained COCO mengganggu representasi fitur yang sudah matang, merusak akurasi tanpa proses pemanasan (\textit{warmup}) yang lama.
         \end{column}
     \end{columns}
+    
+    \vspace{1.5em}
+    \centering
+    \footnotesize \textit{*Catatan Keterbatasan:} Temuan negatif CBAM terbatas pada konfigurasi uji (P3/P4/P5, tanpa warmup terpisah, single learning rate) dan tidak berlaku umum untuk seluruh konfigurasi CBAM.
 \end{frame}
 
 \begin{frame}{Kesimpulan \& Rekomendasi}
@@ -488,6 +499,7 @@
             \begin{itemize}
                 \item Gunakan \textbf{YOLOv8s} untuk CCTV/ETLE real-time.
                 \item Uji model pada kondisi menantang (malam hari, oklusi parah, cuaca ekstrem).
+                \item \textbf{Etika \& Regulasi}: Integrasi pencatatan plat nomor otomatis memerlukan payung regulasi privasi data publik yang jelas.
             \end{itemize}
         \end{column}
     \end{columns}
@@ -503,7 +515,7 @@
 
 \vspace{2em}
 {\small\color{text!70}
-Dari Zero-shot ke Fine-tuning: Gap Domain \& Peran Atensi pada Deteksi Helm\\
+From Zero-Shot to Fine-Tuning: Mengukur Domain Gap dan Peran Attention pada Deteksi Helm\\
 Mata Kuliah Visual Komputer Lanjut
 }
 \end{frame}
