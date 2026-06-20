@@ -1,0 +1,15 @@
+# Computer Vision — Deteksi Helm Pengendara Motor (Fase 1: baseline YOLOv8)
+# Pasang torch sesuai versi CUDA GPU lokal (lihat https://pytorch.org/get-started/locally/)
+# Contoh CUDA 12.1:  pip install torch --index-url https://download.pytorch.org/whl/cu121
+
+ultralytics>=8.2.0
+torch>=2.1.0
+roboflow>=1.1.0
+pyyaml>=6.0
+pandas>=2.0
+opencv-python>=4.8
+numpy>=1.24
+
+# Demo & dashboard (app/ Streamlit)
+streamlit>=1.36
+pillow>=10.0
