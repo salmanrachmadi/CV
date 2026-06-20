@@ -16,7 +16,7 @@
 
 \begin{document}
 
-\title{Comparison of YOLOv8s, YOLO11s, and YOLOv8s+CBAM for Motorcyclist Helmet-Use Detection}
+\title{From Zero-Shot to Fine-Tuning: Measuring the Domain Gap and the Role of Attention in Motorcyclist Helmet Detection}
 
 \author{
 \IEEEauthorblockN{Ardityo Cahyo, Salman Rachmadi, and Ahmad Taufiq}
@@ -29,11 +29,11 @@ Bandung, Indonesia \\
 \maketitle
 
 \begin{abstract}
-Helmet use is the primary protective factor for motorcyclists, and automatic compliance detection from traffic cameras can support road-safety enforcement. This study compares three YOLO-family architectures for helmet-use detection: YOLOv8s as a pure-CNN baseline, YOLO11s with partial self-attention through C2PSA blocks, and YOLOv8s augmented with CBAM channel-spatial attention. We hypothesize that YOLO11s, as the more recent architecture, will outperform the plain baseline. All models were trained on a public dataset of 1,803 images under an identical protocol and evaluated on a held-out test split with multiple seeds and paired t-tests. The results do not confirm the hypothesis. YOLOv8s achieved the highest mAP@0.5 ($0.9592 \pm 0.0014$) at approximately 296 FPS. YOLO11s did not differ significantly from the baseline ($p = 0.54$). Adding CBAM significantly reduced mAP@0.5 by $0.0113$ ($t(2) = 10.9$, $p = 0.008$, Cohen's $d \approx 9.1$). Within this scope, added attention complexity does not improve accuracy on a small, relatively easy helmet-detection dataset.
+Helmet use is the primary protective factor for motorcyclists, and automatic compliance detection from traffic cameras can support road-safety enforcement. Two assumptions often appear in practice: that COCO pre-trained weights can be used directly on the helmet domain, and that adding an attention mechanism improves accuracy. This study tests both under controlled conditions on a public dataset of 1{,}803 images with three classes (helmet, license plate, motorcyclist). As a sanity check, we first verify the size of the domain gap through zero-shot evaluation of COCO weights using \texttt{pycocotools}; this confirms whether fine-tuning is necessary rather than comparing architectures. The main contribution is a controlled multi-seed evaluation ($n=3$) of three architectures after identical fine-tuning: YOLOv8s as a pure-CNN baseline, YOLO11s with partial self-attention through C2PSA blocks, and YOLOv8s augmented with CBAM channel-spatial attention. The zero-shot results confirm a large domain gap, with mAP@0.5 of only $0.0986$ to $0.1143$ and the helmet and license-plate classes at zero by design. After fine-tuning, accuracy jumps to about $0.96$ mAP@0.5. No attention variant surpasses the pure CNN on mAP@0.5: YOLOv8s reaches $0.9596 \pm 0.0008$ at approximately $296$ FPS. YOLO11s does not differ significantly from the baseline ($p = 0.11$), and on the stricter mAP@[.5:.95] it slightly leads ($0.6902$ vs $0.6885$) without significance. Adding CBAM reduces mAP@0.5 significantly ($t(2) = 16.1$, $p = 0.004$, Cohen's $d \approx 9.3$), a finding limited to a single placement and learning-rate configuration. Within this scope, added attention complexity does not yield a consistent benefit on a small, relatively easy helmet-detection dataset.
 \end{abstract}
 
 \begin{IEEEkeywords}
-helmet detection, object detection, attention mechanism, YOLOv8, YOLO11, CBAM, motorcycle safety
+helmet detection, object detection, attention mechanism, YOLOv8, YOLO11, CBAM, transfer learning, domain gap
 \end{IEEEkeywords}
 
 \section{Introduction}
@@ -42,11 +42,15 @@ Motorcycles account for a large share of traffic-accident casualties, especially
 
 The YOLO family has become the de facto standard for real-time detection, with each iteration improving the backbone, neck, and label-assignment strategy \cite{ref5, ref_terven, ref_yolov9, ref_yolov10}. YOLO11 is the most recent iteration and introduces positional self-attention blocks (C2PSA) into the feature pathway, making it a natural successor to the attention-free YOLOv8. Separately, lightweight attention modules such as CBAM \cite{ref9} or Squeeze-and-Excitation (SE) networks \cite{ref_senet} are a popular way to inject channel-spatial attention into an existing CNN backbone without replacing the architecture entirely.
 
-Several recent studies inject attention modules into YOLO-family detectors and report accuracy improvements on helmet-detection datasets \cite{ref4, ref19, ref20}. These reports create an expectation that adding attention should help. However, the studies generally compare a single configuration without repetition across seeds and omit statistical significance tests. Consequently, the reported gains could stem from hyperparameters, augmentation, or initialisation rather than from the attention mechanism itself.
+Several recent studies inject attention modules into YOLO-family detectors and report accuracy improvements on helmet-detection datasets \cite{ref4, ref19, ref20}. Those studies, however, run on different datasets, base architectures, and training protocols, so their numbers cannot be compared directly with ours. They also generally compare a single configuration without repetition across seeds and omit statistical significance tests, so the reported gains could stem from hyperparameters, augmentation, or initialisation rather than from the attention mechanism itself.
 
-We address this gap by evaluating three architectures under a unified protocol. We hypothesize that YOLO11s, as the more recent architecture incorporating C2PSA blocks, will outperform the plain YOLOv8s baseline. The research question is: \textbf{does adding attention to a YOLO-family detector improve helmet-detection accuracy in a controlled, multi-seed comparison?}
+A second assumption is rarely verified: that COCO pre-trained weights are already close to the helmet task. The helmet class schema (helmet, license plate, motorcyclist) only partly overlaps with the 80 COCO classes \cite{ref14}, and two of the three classes have no counterpart at all. The size of this domain gap should be measured, not assumed.
 
-The contributions of this paper are threefold. First, we present a controlled comparison of YOLOv8s, YOLO11s, and YOLOv8s+CBAM with identical hyperparameters, data, and augmentation, so that performance differences can be attributed to architectural factors. Second, we conduct a multi-seed evaluation that reports paired t-tests, Cohen's $d$ effect sizes, and 95\% confidence intervals, so the conclusions do not rest on the luck of a single initialisation. Third, we provide a principled analysis of why the hypothesis was not confirmed by the data, along with practical implications for model selection in the helmet-detection domain.
+We address both gaps with a controlled evaluation. The contribution is methodological rather than a claim that attention is harmful: an identical protocol, multi-seed repetition, formal statistical testing, and an explicit separation between the domain gap (the zero-shot stage) and the attention effect (the fine-tuning stage). Two research questions follow:
+\begin{itemize}
+\item \textbf{RQ1.} How large is the domain gap between COCO weights as-is and the helmet-detection task?
+\item \textbf{RQ2.} After fine-tuning with an identical protocol and multi-seed repetition, do attention mechanisms (C2PSA in YOLO11s, CBAM in YOLOv8s) surpass the pure CNN YOLOv8s in a statistically meaningful way?
+\end{itemize}
 
 \section{Literature Review}
 
@@ -54,23 +58,23 @@ The contributions of this paper are threefold. First, we present a controlled co
 
 Research on helmet detection has evolved from simple classification toward pipelines that detect, track, and classify motorcycles together with their riders. Siebert and Lin \cite{ref1} demonstrated large-scale helmet-use detection from traffic video using a single-stage detector and released a widely used annotated dataset. In the enforcement context, several pipelines combine helmet detection with license-plate localisation and recognition to identify violators \cite{ref4, ref_helmet_recent, ref_helmet_cctv}.
 
-A growing body of work integrates attention mechanisms into helmet-detection models. Common patterns include adding channel-spatial attention modules to YOLO-family detectors and inserting feature-fusion blocks together with attention layers \cite{ref19, ref20}. These studies typically report accuracy improvements over their respective baselines. However, the studies generally compare a single configuration without repetition across seeds, use protocols tuned per model, and omit statistical significance tests. This methodological gap directly motivates the controlled, multi-seed comparison presented in this study.
+A growing body of work integrates attention mechanisms into helmet-detection models, commonly by adding channel-spatial attention modules to YOLO-family detectors or inserting feature-fusion blocks together with attention layers \cite{ref19, ref20}. These studies typically report accuracy improvements over their respective baselines, but they generally compare a single configuration without repetition across seeds, use protocols tuned per model, and omit statistical significance tests. This methodological gap motivates the controlled, multi-seed comparison presented here.
 
 \subsection{YOLO Architectures and Attention Modules}
 
-Single-stage detectors formulate detection as direct regression of bounding boxes and classes in a single network pass, trading some accuracy for high speed and employing specialized loss functions like Focal Loss \cite{ref_focalloss} to mitigate class imbalance \cite{ref5}. The YOLO family has become the de facto standard for real-time detection \cite{ref_terven}. YOLOv8 represents a mature CNN generation without explicit attention modules, relying on efficient convolutional blocks, Feature Pyramid Networks (FPN) \cite{ref_fpn}, and Path Aggregation Networks (PANet) \cite{ref_panet} to handle multi-scale objects. YOLO11 introduces C2PSA, a positional self-attention block embedded into the feature pathway, which makes it a useful intermediate point between a pure CNN and a full transformer design.
+Single-stage detectors formulate detection as direct regression of bounding boxes and classes in a single network pass, trading some accuracy for high speed and employing specialised loss functions such as Focal Loss \cite{ref_focalloss} to mitigate class imbalance \cite{ref5}. The YOLO family has become the de facto standard for real-time detection \cite{ref_terven}. YOLOv8 represents a mature CNN generation without explicit attention modules, relying on efficient convolutional blocks, Feature Pyramid Networks (FPN) \cite{ref_fpn}, and Path Aggregation Networks (PANet) \cite{ref_panet} to handle multi-scale objects. YOLO11 introduces C2PSA, a positional self-attention block embedded into the feature pathway, which places it at an intermediate point between a pure CNN and a full transformer design.
 
-Surveys of attention in vision \cite{ref17, ref18} conclude that the effectiveness of attention mechanisms depends heavily on training-data volume and task complexity. On the lightweight side, modules like CBAM \cite{ref9} and Coordinate Attention \cite{ref_coordatt} sequentially apply channel and spatial attention to emphasise both what is relevant and where it appears in a feature map. They add a small number of parameters and can be inserted into any CNN without replacing the backbone. For small-object detection, Cheng et al.\ \cite{ref23} observe that objects such as helmets and license plates within wide frames require multi-scale feature representations and high input resolution.
+Surveys of attention in vision \cite{ref17, ref18} conclude that the effectiveness of attention mechanisms depends heavily on training-data volume and task complexity. On the lightweight side, modules such as CBAM \cite{ref9} and Coordinate Attention \cite{ref_coordatt} sequentially apply channel and spatial attention to emphasise both what is relevant and where it appears in a feature map. They add a small number of parameters and can be inserted into any CNN without replacing the backbone. For small-object detection, Cheng et al.\ \cite{ref23} observe that objects such as helmets and license plates within wide frames require multi-scale feature representations and high input resolution.
 
 \section{Methodology}
 
 \subsection{Dataset}
 
-We use a public helmet-detection dataset from Roboflow Universe (NCKH 2023 Helmet Detection Project, version 19, MIT license). The dataset contains 1,803 annotated images in YOLO format with three classes: helmet, license plate, and motorcyclist. A fixed split of 1,563 training, 140 validation, and 100 test images was used throughout all experiments. All final metrics were computed on the test split, which was never seen during training.
+We use a public helmet-detection dataset from Roboflow Universe (NCKH 2023 Helmet Detection Project, version 19, MIT license). The dataset contains 1{,}803 annotated images in YOLO format with three classes: helmet, license plate, and motorcyclist. A fixed split of 1{,}563 training, 140 validation, and 100 test images was used throughout. All final metrics were computed on the test split, which was never seen during training. The dataset is daytime-oriented with adequate lighting and limited occlusion, conditions that are relatively favourable compared with real CCTV footage.
 
 \subsection{Architectures Compared}
 
-Three architectures were chosen to occupy different positions on the attention spectrum, as summarised in Table~\ref{tab:architectures}. YOLOv8s represents the pure-CNN baseline with no explicit attention. YOLO11s adds partial self-attention through C2PSA blocks while remaining a single-stage detector. YOLOv8s+CBAM applies a controlled attention intervention by inserting CBAM modules into the baseline network.
+Three architectures were chosen to occupy different positions on the attention spectrum, as summarised in Table~\ref{tab:architectures}. YOLOv8s is the pure-CNN baseline with no explicit attention. YOLO11s adds partial self-attention through C2PSA blocks while remaining a single-stage detector. YOLOv8s+CBAM applies a controlled attention intervention by inserting CBAM modules into the baseline network.
 
 \begin{table}[!t]
 \caption{The three architectures and their attention mechanism.}
@@ -87,147 +91,151 @@ YOLOv8s+CBAM & Channel + spatial & $\sim$11.51 M \\
 \end{tabular}}
 \end{table}
 
-Three CBAM modules were inserted at the outputs of the three detection scales (P3, P4, P5) just before the detection head, so the YOLOv8s+CBAM variant is identical to the plain YOLOv8s except for the added attention. The addition raises the parameter count from 11.17 to 11.51 million, an increase of approximately three percent. This small increment isolates the effect of attention while keeping all other factors constant.
+Three CBAM modules were inserted at the outputs of the three detection scales (P3, P4, P5) just before the detection head, so the YOLOv8s+CBAM variant is identical to the plain YOLOv8s except for the added attention. The addition raises the parameter count from 11.17 to 11.51 million, an increase of about three percent. This small increment isolates the effect of attention while keeping all other factors constant. The CBAM variant was tested in a single configuration only, namely this P3/P4/P5 placement with a single learning rate and no separate warmup for the attention module; these are acknowledged implementation limitations.
 
-\subsection{Training Protocol}
+\subsection{Two Evaluation Protocols}
 
-All models were trained with an identical protocol using the Ultralytics framework \cite{ref6} on PyTorch with a single NVIDIA RTX 4090 GPU. Each model was initialised with COCO-pretrained weights \cite{ref14}. For the CBAM variant, the attention layers were randomly initialised while the rest of the network inherited COCO weights. The unified configuration used automatic batch-size selection, automatic optimizer selection, identical augmentation (mosaic, HSV shifting, horizontal flipping), and early stopping with patience 25 over a maximum of 100 epochs. All random sources were seeded for reproducibility.
+\textit{Protocol 1, zero-shot COCO baseline.} The COCO pre-trained weights of YOLOv8s and YOLO11s are evaluated on the test split without any training, as a verification of the domain-gap size. Because COCO recognises 80 classes that include neither helmet nor license plate, predictions are mapped to our three-class schema: COCO motorcycle becomes motorcyclist, while helmet and license plate have no counterpart and therefore score zero by design. Metrics are computed with \texttt{pycocotools} at a low confidence threshold (0.001) so the precision-recall curve is correct. This protocol does not compare architectures meaningfully, since both fail on two of three classes; it confirms that fine-tuning is mandatory.
 
-\subsection{Training Configuration Rationale}
-
-The input resolution was set to 1280 pixels rather than the 640-pixel Ultralytics default. This choice was motivated by the small relative size of the helmet and license-plate classes within each frame. Inspection of the training images confirmed that these objects occupy a small fraction of the total pixel area, and higher resolution preserves the spatial detail needed for accurate bounding-box localisation. This is consistent with findings from Cheng et al.\ \cite{ref23}, who observe that high input resolution is critical for detecting small objects.
+\textit{Protocol 2, fine-tuning.} All three architectures are trained from COCO pre-trained weights \cite{ref14} with an identical protocol using the Ultralytics framework \cite{ref6} on PyTorch with a single NVIDIA RTX 4090 GPU. For the CBAM variant, the attention layers were randomly initialised while the rest of the network inherited COCO weights. The unified configuration used an input resolution of 1280 pixels, automatic batch-size selection, automatic optimizer selection, an initial learning rate of 0.01, identical augmentation (mosaic, HSV shifting, horizontal flipping, scaling), and early stopping with patience 25 over a maximum of 100 epochs. Each architecture was trained on three seeds (42, 0, 1) run sequentially and independently, with GPU memory cleared between runs. The 1280-pixel resolution, rather than the 640-pixel default, was motivated by the small relative size of the helmet and license-plate classes, consistent with Cheng et al.\ \cite{ref23}.
 
 \subsection{Evaluation Metrics and Statistical Testing}
 
-The primary metrics are mean Average Precision (mAP) at intersection-over-union (IoU) thresholds of 0.5 (mAP@0.5) and over a range of thresholds from 0.5 to 0.95 (mAP@[.5:.95]), supplemented by inference speed in frames per second (FPS). Average Precision (AP) for a given class is defined as the area under the precision-recall curve:
+The primary metrics are mean Average Precision (mAP) at an IoU threshold of 0.5 (mAP@0.5) and averaged over thresholds from 0.5 to 0.95 (mAP@[.5:.95]), supplemented by inference speed in frames per second (FPS). Average Precision for a class is the area under the precision-recall curve:
 \begin{equation}
 AP = \int_{0}^{1} P(R) \, dR
 \end{equation}
-where $P(R)$ denotes precision as a function of recall $R$. The mAP is subsequently computed as the arithmetic mean of AP across the set of target classes $C$:
+where $P(R)$ denotes precision as a function of recall $R$. The mAP is the arithmetic mean of AP across the set of target classes $C$:
 \begin{equation}
 mAP = \frac{1}{|C|} \sum_{c \in C} AP_c
 \end{equation}
-FPS was measured on a single dedicated run while the GPU was idle, using the Ultralytics built-in benchmark on the full test split, with batch size 1 on the same hardware for all models.
+FPS is reported as an indicative trade-off measure, not a controlled benchmark, since it was measured on a single dedicated run with batch size 1 while the GPU was idle.
 
-To assess the significance of accuracy differences, we paired the results between models on the same seed and applied a paired t-test to the mAP@0.5 difference of each seed pair, with significance level $\alpha = 0.05$. The paired $t$-statistic is defined as:
+To assess accuracy differences for the fine-tuned models, we paired results between models on the same seed and applied a paired t-test to the per-seed metric difference, with significance level $\alpha = 0.05$. The paired $t$-statistic is:
 \begin{equation}
 t = \frac{\bar{d}}{s_d / \sqrt{n}}
 \end{equation}
-where $\bar{d}$ represents the sample mean of the paired differences, $s_d$ is the sample standard deviation of these differences, and $n$ is the number of pairs ($n=3$ seeds). To quantify the magnitude of the experimental effect, we report Cohen's $d$ effect size for paired samples, formulated as:
+where $\bar{d}$ is the sample mean of the paired differences, $s_d$ their sample standard deviation, and $n$ the number of pairs ($n=3$ seeds). We also report Cohen's $d$ for paired samples:
 \begin{equation}
 d = \frac{\bar{d}}{s_d}
 \end{equation}
-We also report the 95\% confidence interval for the mean difference. Pairing by seed controls for initialisation variation and increases sensitivity to architectural effects. This protocol follows guidance on accounting for variance in machine learning benchmarks \cite{ref_bouthillier}.
-
+Pairing by seed controls for initialisation variation and increases sensitivity to architectural effects \cite{ref_bouthillier}. With $n=3$, the test has limited power; p-values and effect sizes are presented as supplementary information, with the awareness that only large differences can be detected convincingly.
 
 \section{Results}
 
-\subsection{Overall Performance}
+\subsection{Domain-Gap Verification (RQ1)}
 
-Table~\ref{tab:overall} summarises the performance of the three architectures on the test split. YOLOv8s achieves the highest mAP@0.5 together with the best inference speed. YOLO11s is comparable in accuracy but does not exceed the baseline. YOLOv8s+CBAM records the lowest mAP@0.5 of the three models.
+Table~\ref{tab:vanilla} summarises the zero-shot evaluation. COCO models as-is cannot be used for helmet detection: mAP@0.5 is only $0.0986$ (YOLOv8s) and $0.1143$ (YOLO11s). This aggregate is dominated by the motorcyclist class, the only class with a COCO counterpart (AP@0.5 of $0.296$ and $0.343$), while helmet and license plate are zero by design. Fig.~\ref{fig:perclass} shows the per-class breakdown, and Fig.~\ref{fig:gap} contrasts the zero-shot and fine-tuned regimes. The small difference between the two architectures here is not meaningful, since both fail on two of three classes; the zero-shot stage serves only to confirm that fine-tuning is mandatory. This answers RQ1: the domain gap is large.
 
 \begin{table}[!t]
-\caption{Performance on the test split (mean $\pm$ std, $n=3$ seeds).}
+\caption{Zero-shot COCO baseline on the test split ($n=1$).}
+\label{tab:vanilla}
+\resizebox{\columnwidth}{!}{%
+\begin{tabular}{lccccc}
+\toprule
+\textbf{Model} & \textbf{mAP@0.5} & \textbf{mAP@.5:.95} & \textbf{helmet} & \textbf{plate} & \textbf{m.cyclist} \\
+\midrule
+YOLOv8s & $0.0986$ & $0.0270$ & $0.000$ & $0.000$ & $0.296$ \\
+YOLO11s & $0.1143$ & $0.0320$ & $0.000$ & $0.000$ & $0.343$ \\
+\bottomrule
+\end{tabular}}
+\end{table}
+
+\begin{figure}[htbp]
+\centerline{\includegraphics[width=0.95\columnwidth]{../results/figures/vanilla_per_class.png}}
+\caption{Per-class AP@0.5 under zero-shot COCO. The helmet and license-plate classes are zero by design (no COCO counterpart); only the motorcyclist class receives a signal through the mapping from COCO motorcycle.}
+\label{fig:perclass}
+\end{figure}
+
+\begin{figure}[htbp]
+\centerline{\includegraphics[width=0.95\columnwidth]{../results/figures/compare_vanilla_vs_finetuned.png}}
+\caption{Accuracy jump from the zero-shot baseline (about $0.10$) to the fine-tuned models (about $0.96$) on mAP@0.5. The difference among architectures after fine-tuning is far smaller than the effect of fine-tuning itself.}
+\label{fig:gap}
+\end{figure}
+
+\subsection{Fine-Tuned Performance (RQ2)}
+
+After fine-tuning, accuracy jumps to about $0.96$ mAP@0.5 and closes the domain gap. Table~\ref{tab:overall} summarises the multi-seed results. On mAP@0.5, YOLOv8s achieves the highest value together with the best inference speed. YOLO11s is comparable but does not exceed the baseline, and YOLOv8s+CBAM records the lowest mAP@0.5. On the stricter mAP@[.5:.95], the order reverses: YOLO11s slightly leads YOLOv8s, while CBAM remains lowest. Fig.~\ref{fig:finetuned} visualises the mAP@0.5 comparison with error bars showing the standard deviation across seeds.
+
+\begin{table}[!t]
+\caption{Fine-tuned performance on the test split (mean $\pm$ std, $n=3$ seeds).}
 \label{tab:overall}
 \resizebox{\columnwidth}{!}{%
 \begin{tabular}{lccc}
 \toprule
 \textbf{Model} & \textbf{mAP@0.5} & \textbf{mAP@.5:.95} & \textbf{FPS} \\
 \midrule
-\textbf{YOLOv8s} & $\mathbf{0.9592 \pm 0.0014}$ & $0.6862 \pm 0.0046$ & $\mathbf{\sim 296}$ \\
-YOLO11s          & $0.9569 \pm 0.0046$          & $\mathbf{0.6898 \pm 0.0030}$ & $\sim 189$ \\
-YOLOv8s+CBAM     & $0.9479 \pm 0.0004$          & $0.6810 \pm 0.0045$ & $\sim 290$ \\
+\textbf{YOLOv8s} & $\mathbf{0.9596 \pm 0.0008}$ & $0.6885 \pm 0.0006$ & $\mathbf{\sim 296}$ \\
+YOLO11s          & $0.9574 \pm 0.0019$          & $\mathbf{0.6902 \pm 0.0022}$ & $\sim 189$ \\
+YOLOv8s+CBAM     & $0.9481 \pm 0.0006$          & $0.6832 \pm 0.0034$ & $\sim 290$ \\
 \bottomrule
 \end{tabular}}
 \end{table}
 
-\subsection{Effect of Attention on Accuracy}
-
-Fig.~\ref{fig:attention} visualises the mAP@0.5 of the three models with error bars showing the standard deviation across seeds. The hypothesis that YOLO11s would outperform YOLOv8s is not confirmed by the data.
-
 \begin{figure}[htbp]
-\centerline{\includegraphics[width=0.95\columnwidth]{../results/figures/fig1_attention_mAP50.png}}
-\caption{mAP@0.5 on the test split across the three architectures. Error bars show the standard deviation across seeds.}
-\label{fig:attention}
+\centerline{\includegraphics[width=0.95\columnwidth]{../results/figures/compare_finetuned.png}}
+\caption{mAP@0.5 across the three fine-tuned architectures (mean $\pm$ std, $n=3$). YOLOv8s leads slightly on mAP@0.5; on mAP@[.5:.95] the order changes (YOLO11s highest, Table~\ref{tab:overall}).}
+\label{fig:finetuned}
 \end{figure}
 
-Table~\ref{tab:ttest} reports the paired t-tests for both comparisons. YOLO11s does not differ significantly from the baseline ($\Delta = -0.0023$, $p = 0.54$). The Cohen's $d$ of 0.61 indicates a medium effect size by convention, but the design with $n = 3$ seeds lacks the statistical power to reach significance. This result should be interpreted as an absence of evidence of a difference, not as evidence of equivalence. In contrast, adding the CBAM module produces a reduction in mAP@0.5 that is both statistically significant and practically large ($\Delta = -0.0113$, $p = 0.008$, Cohen's $d \approx 9.1$). The very small standard deviation of the CBAM variant ($\pm 0.0004$) confirms that this reduction is stable across all tested initialisations.
+\subsection{Significance Testing}
+
+Table~\ref{tab:ttest} reports the paired t-tests on both metrics. On mAP@0.5, adding CBAM reduces accuracy significantly and consistently ($\Delta = +0.0116$ for the baseline, $t(2) = 16.1$, $p = 0.004$, $d \approx 9.3$); CBAM is also lower than YOLO11s ($p = 0.012$). The YOLOv8s versus YOLO11s difference is small ($0.0022$) and not significant ($t(2) = 2.71$, $p = 0.11$). On mAP@[.5:.95], no pair is significant, including YOLOv8s versus CBAM ($p = 0.079$). This reversal across metrics confirms that the YOLOv8s advantage is not consistent across all evaluation dimensions. This answers RQ2: no attention mechanism meaningfully surpasses the pure CNN, and CBAM in the configuration tested is significantly detrimental on mAP@0.5.
 
 \begin{table}[!t]
-\caption{Paired t-test results for mAP@0.5 (baseline vs each variant).}
+\caption{Paired t-test results across seeds.}
 \label{tab:ttest}
 \resizebox{\columnwidth}{!}{%
 \begin{tabular}{lcccc}
 \toprule
-\textbf{Comparison} & \textbf{$\Delta$mAP@0.5} & \textbf{$t$(df)} & \textbf{$p$} & \textbf{Cohen's $d$} \\
+\textbf{Comparison} & \textbf{$\Delta$} & \textbf{$t$(2)} & \textbf{$p$} & \textbf{Cohen's $d$} \\
 \midrule
-vs YOLO11s & $-0.0023$ & $0.73\,(2)$ & $0.54$ & $0.61$ \\
-vs CBAM    & $-0.0113$ & $10.9\,(2)$ & $0.008$ & $9.1$ \\
+\multicolumn{5}{l}{\textit{mAP@0.5}} \\
+YOLOv8s vs CBAM     & $+0.0116$ & $16.1$ & $0.004$ & $9.3$ \\
+YOLOv8s vs YOLO11s  & $+0.0022$ & $2.71$ & $0.11$ & $1.56$ \\
+YOLO11s vs CBAM     & $+0.0093$ & $8.92$ & $0.012$ & $5.15$ \\
+\midrule
+\multicolumn{5}{l}{\textit{mAP@[.5:.95]}} \\
+YOLO11s vs YOLOv8s  & $+0.0018$ & $1.16$ & $0.37$ & $0.67$ \\
+YOLOv8s vs CBAM     & $+0.0053$ & $3.33$ & $0.079$ & $1.92$ \\
+YOLO11s vs CBAM     & $+0.0071$ & $2.52$ & $0.13$ & $1.45$ \\
 \bottomrule
 \end{tabular}}
 \end{table}
 
-\subsection{Per-Class Performance}
-
-On the YOLOv8s baseline, per-class accuracy follows a pattern driven by object size and visual distinctiveness, as shown in Fig.~\ref{fig:perclass}. The motorcyclist class is the easiest to detect because riders are large and prominent in the frame. The helmet class is the most challenging because helmets are small, visually similar to other head accessories, and highly variable in colour and viewing angle. Because the helmet class is the most application-critical, it is the primary determinant of remaining room for improvement.
-
-\begin{figure}[htbp]
-\centerline{\includegraphics[width=0.95\columnwidth]{../results/figures/fig2_per_class.png}}
-\caption{Per-class performance of YOLOv8s on the test split. The helmet class is the most challenging due to its small size and visual ambiguity.}
-\label{fig:perclass}
-\end{figure}
-
-\subsection{Speed Trade-Off}
-
-As shown in Fig.~\ref{fig:speed}, YOLO11s runs at approximately 189 FPS, slower than the YOLOv8s baseline at approximately 296 FPS. The CBAM variant is nearly as fast as the baseline because the added modules are lightweight. Given that YOLO11s offers no statistically significant accuracy gain over YOLOv8s, this speed reduction is an unrewarded cost. YOLOv8s therefore occupies the most favourable position, leading on both accuracy and speed simultaneously.
-
-\begin{figure}[htbp]
-\centerline{\includegraphics[width=0.95\columnwidth]{../results/figures/fig3_accuracy_speed.png}}
-\caption{Accuracy (mAP@0.5) versus speed (FPS). YOLOv8s occupies the most advantageous position because it leads on both axes.}
-\label{fig:speed}
-\end{figure}
-
 \subsection{Qualitative Analysis}
 
-Fig.~\ref{fig:qualitative} shows a typical detection output from YOLOv8s on a test image. The rider, helmet, and license plate are detected simultaneously with tight bounding boxes. Visual inspection of the test sample confirms that remaining errors concentrate on very small or partially occluded helmets, which is consistent with the per-class quantitative findings.
+Fig.~\ref{fig:qualitative} shows a typical detection output from the fine-tuned YOLOv8s on a test image. The rider, helmet, and license plate are detected simultaneously with tight bounding boxes. Visual inspection of the test sample confirms that remaining errors concentrate on very small or partially occluded helmets, consistent with the per-class behaviour observed under zero-shot conditions.
 
 \begin{figure}[htbp]
-\centerline{\includegraphics[width=0.95\columnwidth]{../results/figures/fig4_detection_example.png}}
-\caption{Example detection output from YOLOv8s on a test image. All three classes are detected simultaneously.}
+\centerline{\includegraphics[width=0.95\columnwidth]{../results/figures/infer_yolov8s.png}}
+\caption{Example detection output from the fine-tuned YOLOv8s on a test image. All three classes are detected simultaneously.}
 \label{fig:qualitative}
 \end{figure}
 
 \section{Discussion}
 
-The hypothesis that YOLO11s would outperform YOLOv8s was not confirmed. Under a unified protocol on this dataset, no attention variant surpassed the plain CNN, and the CBAM module was significantly detrimental. Three explanations account for this pattern.
+The jump from about $0.10$ (zero-shot) to about $0.96$ (fine-tuned) confirms that COCO weights as-is are far from ready for helmet detection, and two of the three classes have no counterpart concept in COCO. The practical implication is that every deployment must budget for fine-tuning on domain data, and any performance claim must be reported after domain adaptation rather than from a zero-shot test.
 
-\textbf{Dataset characteristics and ceiling effect.} The training set contains 1,563 images, and the baseline already reaches approximately 0.96 mAP@0.5. With so little headroom, a more complex mechanism has almost no room to demonstrate an advantage. Attention mechanisms benefit most from large-scale data where they can learn meaningful long-range dependencies \cite{ref17, ref18}. In the small-data regime, the theoretical advantage of attention does not materialise.
+Among the fine-tuned models, no attention is consistently superior across all metrics. YOLOv8s leads on mAP@0.5, but YOLO11s is slightly ahead on mAP@[.5:.95], and the two do not differ significantly. This pattern aligns with surveys showing that the benefit of attention depends on dataset scale and heterogeneity \cite{ref17, ref18}. On a small and relatively easy dataset where the baseline already reaches about $0.96$, the room for improvement is thin and insufficient to reveal an attention advantage.
 
-\textbf{Initialisation disruption for CBAM.} The CBAM modules are randomly initialised while the rest of the network inherits COCO weights. The fresh modules disrupt the mature feature flow obtained from transfer learning. With limited data, there is insufficient gradient signal to recover from this disruption, resulting in a small but stable reduction in mAP@0.5. This effect is consistent across all three seeds, as evidenced by the very small standard deviation of $\pm 0.0004$.
+Adding CBAM in the configuration tested reduces mAP@0.5 significantly. Several explanations cannot be ruled out. The randomly initialised CBAM blocks may disturb the mature feature flow inherited from COCO when trained with a single learning rate and no separate warmup; the placement at P3/P4/P5 may be suboptimal; and the ceiling effect near $0.96$ makes even a small decrease appear consistent and significant. The very small standard deviation of the CBAM variant ($\pm 0.0006$) confirms the reduction is stable across seeds. This result does not generalise to all CBAM implementations: a different placement, a separate learning rate, training from scratch, or a warmup schedule may produce different outcomes. It is a result for one specific configuration, not a general statement about CBAM.
 
-\textbf{Rival hypothesis for the CBAM reduction.} The CBAM reduction does not imply that CBAM is intrinsically ineffective for helmet detection. Several design factors may explain it. The module placement at the detection head (P3, P4, P5) rather than in the backbone may be suboptimal. Training with the same learning rate for both the pretrained and the freshly initialised parameters may not give the attention layers sufficient time to converge. A systematic ablation that varies placement, lengthens training, and applies a separate learning rate for the attention parameters is necessary to isolate the exact cause. This remains part of future work.
-
-\textbf{Scope of findings.} This study does not conclude that attention is universally unhelpful. The findings apply specifically to a small, relatively clean dataset and a training protocol optimised for YOLO. Under more challenging conditions, such as nighttime CCTV footage with heavy occlusion and high traffic density, the capacity of attention to model global context may prove beneficial. The practical implication within this scope is that YOLOv8s remains the most rational choice for real-time helmet detection on similar data.
+The findings apply specifically to a small, relatively clean dataset and a training protocol optimised for YOLO. Under more challenging conditions, such as nighttime CCTV footage with heavy occlusion and high traffic density, the capacity of attention to model global context may prove beneficial. Within this scope, YOLOv8s remains the most rational choice for real-time helmet detection on similar data. Because a system that links helmet detection to license plates can identify individuals, deployment within enforcement infrastructure also requires an appropriate regulatory and ethical framework.
 
 \section{Threats to Validity}
 
-\textbf{Single small dataset.} The dataset is curated, well-lit, and lightly occluded. These conditions differ substantially from real road CCTV. Generalisation to more challenging data, where attention mechanisms may genuinely help, has not been verified.
-
-\textbf{Limited seeds and statistical power.} With $n = 3$ seeds and a baseline near the ceiling at 0.96 mAP@0.5, the paired t-test has low power to detect small improvements. The equivalence of YOLO11s and the baseline should therefore be read as an absence of evidence of a difference. Increasing to at least five seeds per model would strengthen any future equivalence or superiority claim.
-
-\textbf{Unified hyperparameters.} Hyperparameters were not tuned per architecture. A protocol tuned for YOLO may disadvantage YOLO11s or CBAM-augmented models that require different learning rates, warm-up schedules, or augmentation recipes to reach their potential. The reported results for attention-based models may represent lower bounds rather than their true capability.
-
-\textbf{CBAM placement and design.} The CBAM modules were inserted only at the detection head. Placement in the backbone, training from scratch, or using a separate learning rate for the attention parameters might yield different results. Without a systematic ablation, the observed reduction cannot be attributed solely to the attention module itself.
+The study uses a single small dataset that is curated, well-lit, and lightly occluded, so generalisation to harder data, where attention may genuinely help, has not been verified. With $n = 3$ seeds and a baseline near the $0.96$ ceiling, the paired t-test has low power; the equivalence of YOLO11s and the baseline should be read as an absence of evidence of a difference, not as evidence of equivalence, and $p = 0.11$ is not sufficient for an equivalence claim. Hyperparameters were not tuned per architecture, so a protocol tuned for YOLO may disadvantage YOLO11s or the CBAM variant. Finally, the CBAM modules were inserted only at the detection head; placement in the backbone, training from scratch, or a separate learning rate for the attention parameters might yield different results, so the observed reduction cannot be attributed solely to the attention module itself.
 
 \section{Conclusion}
 
-We compared three YOLO-family architectures (YOLOv8s, YOLO11s, YOLOv8s+CBAM) for motorcyclist helmet-use detection under an identical training protocol with multi-seed evaluation and paired t-tests. The hypothesis that YOLO11s would outperform the baseline was not confirmed. YOLOv8s achieved the highest mAP@0.5 ($0.9592 \pm 0.0014$) and the fastest inference speed ($\sim 296$ FPS). YOLO11s did not differ significantly from the baseline ($p = 0.54$), and the CBAM module significantly reduced accuracy ($p = 0.008$, Cohen's $d \approx 9.1$). These findings serve as a practical caution against assuming that newer or more complex architectures automatically outperform simpler baselines on small-scale helmet-detection tasks.
+We separated two sources of improvement that are often mixed in the helmet-detection literature. The domain gap from the COCO starting point is large (mAP@0.5 about $0.10$ zero-shot), so fine-tuning is mandatory. After fine-tuning under an identical protocol with multi-seed evaluation and paired t-tests, no attention mechanism consistently surpasses the pure CNN: YOLOv8s leads on mAP@0.5 ($0.9596$) at the fastest speed ($\sim 296$ FPS), YOLO11s is slightly ahead on mAP@[.5:.95] ($0.6902$) without significance, and CBAM in the configuration tested significantly reduces mAP@0.5 ($p = 0.004$). These findings caution against assuming that newer or more complex architectures automatically outperform simpler baselines on small-scale helmet-detection tasks.
 
-Future work should test generalisation on larger and more challenging datasets, including real CCTV footage. Per-architecture hyperparameter tuning would establish whether the equivalence of YOLO11s reflects a genuine parity or a suboptimal training recipe. A systematic CBAM ablation varying placement, training duration, and learning rate allocation would clarify whether the observed reduction is inherent or an artefact of the experimental design.
+Future work should test generalisation on larger and more challenging datasets, including real CCTV footage, increase the number of seeds with an a priori power analysis, and run a systematic CBAM ablation varying placement, training duration, and learning-rate allocation to clarify whether the observed reduction is inherent or an artefact of the experimental design.
 
 \section*{Statements}
 
-\textbf{Data Availability.} The dataset is publicly available through Roboflow Universe under the name NCKH 2023 Helmet Detection Project, version 19, with the MIT license. The training scripts, configurations, and experiment notebooks are available in the authors' research repository.
+\textbf{Data Availability.} The dataset is publicly available through Roboflow Universe as the NCKH 2023 Helmet Detection Project, version 19, under the MIT license. The training scripts, configurations, and experiment notebooks are available in the authors' research repository.
 
 \textbf{Conflict of Interest.} The authors declare no conflict of interest.
 
