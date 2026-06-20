@@ -1,0 +1,5 @@
+\beamer@sectionintoc {1}{Pendahuluan}{3}{0}{1}
+\beamer@sectionintoc {2}{Sanity Check}{5}{0}{2}
+\beamer@sectionintoc {3}{Metodologi}{7}{0}{3}
+\beamer@sectionintoc {4}{Hasil Eksperimen}{10}{0}{4}
+\beamer@sectionintoc {5}{Pembahasan}{13}{0}{5}

@@ -19,11 +19,11 @@
 \title{From Zero-Shot to Fine-Tuning: Measuring the Domain Gap and the Role of Attention in Motorcyclist Helmet Detection}
 
 \author{
-\IEEEauthorblockN{Ardityo Cahyo, Salman Rachmadi, and Ahmad Taufiq}
+\IEEEauthorblockN{Ardityo Cahyo, Salman Rachmadi, and Ahmad Taufiq Nur Rohman}
 \IEEEauthorblockA{\textit{Department of Informatics, School of Computing} \\
 \textit{Telkom University} \\
 Bandung, Indonesia \\
-\{ardityocahyo, salmanrachmadi, ahmadtaufiq\}@student.telkomuniversity.ac.id}
+\{ardityocahyo, salmanrachmadi, ahmadtaufiqr\}@student.telkomuniversity.ac.id}
 }
 
 \maketitle
@@ -71,6 +71,8 @@ Surveys of attention in vision \cite{ref17, ref18} conclude that the effectivene
 \subsection{Dataset}
 
 We use a public helmet-detection dataset from Roboflow Universe (NCKH 2023 Helmet Detection Project, version 19, MIT license). The dataset contains 1{,}803 annotated images in YOLO format with three classes: helmet, license plate, and motorcyclist. A fixed split of 1{,}563 training, 140 validation, and 100 test images was used throughout. All final metrics were computed on the test split, which was never seen during training. The dataset is daytime-oriented with adequate lighting and limited occlusion, conditions that are relatively favourable compared with real CCTV footage.
+
+Across the 100 test images, the distribution of annotation instances reflects a dominance of the \texttt{motorcyclist} and \texttt{helmet} classes as a natural pair, whereas the \texttt{license\_plate} class appears less frequently due to specific camera viewpoints. This natural class imbalance is a characteristic of the domain that should be considered when interpreting aggregate mAP metrics.
 
 \subsection{Architectures Compared}
 
