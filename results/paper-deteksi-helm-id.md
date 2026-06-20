@@ -61,7 +61,18 @@ Beberapa studi melaporkan manfaat atensi spesifik untuk deteksi helm [19], [20],
 
 Kami memakai dataset publik **NCKH 2023 / helmet-detection-project v19** (Roboflow, lisensi MIT) dengan format anotasi YOLO. Dataset berisi 1.803 citra yang terbagi tetap menjadi 1.563 latih, 140 validasi, dan 100 uji, dengan tiga kelas: `helmet`, `license_plate`, dan `motorcyclist`. Dataset ini cenderung berorientasi siang hari, tampak depan atau samping kendaraan, dan pencahayaan memadai. Kondisi ini relatif menguntungkan dibanding skenario CCTV nyata yang kerap diwarnai malam hari, oklusi, dan jarak jauh. Split bersifat tetap dan tidak diacak ulang antar-run untuk menghindari kebocoran data (*leakage*).
 
-Dari 100 citra uji, distribusi instance anotasi mencerminkan dominasi objek `motorcyclist` dan `helmet` sebagai pasangan natural, sedangkan `license_plate` muncul lebih jarang pada sudut pandang tertentu. Ketidakseimbangan natural ini merupakan karakteristik domain yang harus dipertimbangkan saat menginterpretasi metrik mAP agregat.
+Dataset memuat total 8.229 instance anotasi dengan distribusi kelas tak seimbang: `license_plate` 42,5% (3.497 instance), `motorcyclist` 33,5% (2.756), dan `helmet` 24,0% (1.976). Menariknya, kelas `helmet` justru paling sedikit sekaligus berukuran paling kecil, yang memperkuat statusnya sebagai kelas tersulit. Tabel berikut merangkum distribusi per-split.
+
+**Tabel D-1. Distribusi citra dan instance anotasi per-split.**
+
+| Split | Citra | Instance | helmet | license_plate | motorcyclist |
+|---|---|---|---|---|---|
+| Latih | 1.563 (86,7%) | 7.100 | 1.682 | 3.039 | 2.379 |
+| Validasi | 140 (7,8%) | 671 | 177 | 268 | 226 |
+| Uji | 100 (5,5%) | 458 | 117 | 190 | 151 |
+| **Total** | **1.803** | **8.229** | **1.976** | **3.497** | **2.756** |
+
+Selain pra-proses ekspor (auto-orient dengan penghapusan EXIF, *resize* ke 1280×720 secara *stretch*), dataset Roboflow menerapkan augmentasi tiga versi per citra sumber: rotasi acak ±5°, *shear* ±5° (horizontal dan vertikal), penyesuaian kecerahan ±20%, serta *salt-and-pepper* pada 5% piksel. Augmentasi tambahan saat pelatihan (mosaic, HSV, *flip* horizontal, *scale*) dijelaskan pada §III.C. Ketidakseimbangan kelas ini merupakan karakteristik domain yang harus dipertimbangkan saat menginterpretasi metrik mAP agregat.
 
 ### B. Arsitektur yang dibandingkan
 

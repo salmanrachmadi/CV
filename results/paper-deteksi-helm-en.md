@@ -61,7 +61,18 @@ Several studies report attention benefits specific to helmet detection [19], [20
 
 We use the public dataset **NCKH 2023 / helmet-detection-project v19** (Roboflow, MIT license) in YOLO annotation format. The dataset contains 1,803 images split fixedly into 1,563 train, 140 validation, and 100 test, with three classes: `helmet`, `license_plate`, and `motorcyclist`. The dataset tends to be daytime-oriented, showing the front or side of vehicles, with adequate lighting. These conditions are relatively favorable compared with real CCTV scenarios that often involve night-time, occlusion, and long distance. The split is fixed and not reshuffled across runs to avoid data leakage.
 
-Across the 100 test images, the distribution of annotation instances reflects a dominance of `motorcyclist` and `helmet` as a natural pair, while `license_plate` appears less often at certain viewpoints. This natural imbalance is a domain characteristic that must be considered when interpreting aggregate mAP.
+The dataset contains 8,229 annotation instances with an imbalanced class distribution: `license_plate` 42.5% (3,497 instances), `motorcyclist` 33.5% (2,756), and `helmet` 24.0% (1,976). Notably, the `helmet` class is both the least frequent and the smallest in size, which reinforces its status as the hardest class. The table below summarizes the per-split distribution.
+
+**Table D-1. Image and annotation-instance distribution per split.**
+
+| Split | Images | Instances | helmet | license_plate | motorcyclist |
+|---|---|---|---|---|---|
+| Train | 1,563 (86.7%) | 7,100 | 1,682 | 3,039 | 2,379 |
+| Validation | 140 (7.8%) | 671 | 177 | 268 | 226 |
+| Test | 100 (5.5%) | 458 | 117 | 190 | 151 |
+| **Total** | **1,803** | **8,229** | **1,976** | **3,497** | **2,756** |
+
+Beyond export preprocessing (auto-orientation with EXIF stripping, resize to 1280×720 by stretching), the Roboflow dataset applies a three-versions-per-source augmentation: random rotation of ±5°, shear of ±5° (horizontal and vertical), brightness adjustment of ±20%, and salt-and-pepper noise on 5% of pixels. The additional training-time augmentation (mosaic, HSV, horizontal flip, scale) is described in §III.C. This class imbalance is a domain characteristic that must be considered when interpreting aggregate mAP.
 
 ### B. Compared architectures
 

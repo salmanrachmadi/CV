@@ -70,7 +70,26 @@ Surveys of attention in vision \cite{ref17, ref18} conclude that the effectivene
 
 \subsection{Dataset}
 
-We use a public helmet-detection dataset from Roboflow Universe (NCKH 2023 Helmet Detection Project, version 19, MIT license). The dataset contains 1{,}803 annotated images in YOLO format with three classes: helmet, license plate, and motorcyclist. A fixed split of 1{,}563 training, 140 validation, and 100 test images was used throughout. All final metrics were computed on the test split, which was never seen during training. The dataset is daytime-oriented with adequate lighting and limited occlusion, conditions that are relatively favourable compared with real CCTV footage.
+We use a public helmet-detection dataset from Roboflow Universe (NCKH 2023 Helmet Detection Project, version 19, MIT license). The dataset contains 1{,}803 annotated images in YOLO format with three classes: helmet, license plate, and motorcyclist. A fixed split of 1{,}563 training (86.7\%), 140 validation (7.8\%), and 100 test images (5.5\%) was used throughout. All final metrics were computed on the test split, which was never seen during training. The dataset is daytime-oriented with adequate lighting and limited occlusion, conditions that are relatively favourable compared with real CCTV footage.
+
+The dataset comprises 8{,}229 annotation instances with an imbalanced class distribution, summarised in Table~\ref{tab:dataset}. The license-plate class is the most frequent (42.5\%), while the helmet class is both the least frequent (24.0\%) and the smallest in size, reinforcing its status as the hardest class. Beyond export preprocessing (auto-orientation with EXIF stripping and resizing to $1280\times720$ by stretching), the dataset applies a three-versions-per-source augmentation: random rotation of $\pm5^\circ$, shear of $\pm5^\circ$, brightness adjustment of $\pm20\%$, and salt-and-pepper noise on 5\% of pixels. Additional training-time augmentation (mosaic, HSV, horizontal flip, scale) is described in Section~III-C.
+
+\begin{table}[!t]
+\caption{Image and annotation-instance distribution per split.}
+\label{tab:dataset}
+\resizebox{\columnwidth}{!}{%
+\begin{tabular}{lccccc}
+\toprule
+\textbf{Split} & \textbf{Images} & \textbf{Instances} & \textbf{helmet} & \textbf{plate} & \textbf{m.cyclist} \\
+\midrule
+Train      & 1{,}563 & 7{,}100 & 1{,}682 & 3{,}039 & 2{,}379 \\
+Validation & 140     & 671     & 177     & 268     & 226 \\
+Test       & 100     & 458     & 117     & 190     & 151 \\
+\midrule
+\textbf{Total} & \textbf{1{,}803} & \textbf{8{,}229} & \textbf{1{,}976} & \textbf{3{,}497} & \textbf{2{,}756} \\
+\bottomrule
+\end{tabular}}
+\end{table}
 
 Across the 100 test images, the distribution of annotation instances reflects a dominance of the \texttt{motorcyclist} and \texttt{helmet} classes as a natural pair, whereas the \texttt{license\_plate} class appears less frequently due to specific camera viewpoints. This natural class imbalance is a characteristic of the domain that should be considered when interpreting aggregate mAP metrics.
 

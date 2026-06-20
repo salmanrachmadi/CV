@@ -261,8 +261,9 @@
     \normalsize
     \vspace{0.5em}
     \begin{itemize}
-        \item \textbf{1.803 Gambar} (1.563 Train / 140 Val / 100 Test).
-        \item \textbf{Resolusi 1280px}: Untuk menangkap objek kecil (helm \& plat nomor) di kejauhan.
+        \item \textbf{1.803 Gambar} (1.563 / 140 / 100 = Train/Val/Test) $\approx$ 8.229 instance.
+        \item \textbf{Augmentasi ekspor:} rotasi $\pm5^\circ$, shear $\pm5^\circ$, kecerahan $\pm20\%$, salt-and-pepper 5\%.
+        \item \textbf{Resolusi 1280px}: menangkap objek kecil (helm \& plat) di kejauhan.
         \item Kondisi jalan raya luar ruangan yang realistis.
     \end{itemize}
 \end{column}
@@ -272,12 +273,12 @@
     \normalsize
     \vspace{0.5em}
     \begin{itemize}
-        \item \texttt{motorcyclist}: Mayoritas (Sangat Dominan).
-        \item \texttt{helmet}: Dominan.
-        \item \texttt{license\_plate}: Jarang (Imbalance Alami).
+        \item \texttt{license\_plate}: 42,5\% (terbanyak).
+        \item \texttt{motorcyclist}: 33,5\%.
+        \item \texttt{helmet}: 24,0\% (paling sedikit \& terkecil $\Rightarrow$ tersulit).
     \end{itemize}
     \vspace{0.5em}
-    \footnotesize \textit{*Note:} Imbalance data merefleksikan kondisi lalu lintas riil.
+    \footnotesize \textit{*Note:} Total 8.229 instance; ketidakseimbangan kelas alami.
 \end{column}
 \end{columns}
 \end{frame}
